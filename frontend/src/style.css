@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+/* Calm palette: no red/green for gains and losses; one teal accent. */
+@theme {
+  --color-ink-950: #0b1220;
+  --color-ink-900: #111a2e;
+  --color-ink-800: #18233b;
+  --color-ink-700: #24324f;
+  --color-ink-600: #34456a;
+  --color-ink-400: #8393b3;
+  --color-ink-300: #a9b6cf;
+  --color-ink-100: #e6ecf7;
+  --color-accent: #2dd4bf;
+  --color-accent-soft: #134e4a;
+  --color-calm: #93c5fd;
+  --color-warm: #fbbf24;
+  --font-sans: "Inter", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+}
+
+html, body {
+  background: var(--color-ink-950);
+  color: var(--color-ink-100);
+  font-family: var(--font-sans);
+  font-feature-settings: "tnum";
+}
+
+@utility card {
+  @apply rounded-2xl border border-ink-700/70 bg-ink-900 p-5;
+}
+@utility label {
+  @apply text-xs font-medium tracking-wide text-ink-400;
+}
+@utility btn {
+  @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition
+    disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-accent;
+}
+@utility btn-primary {
+  @apply btn bg-accent text-ink-950 hover:bg-teal-300;
+}
+@utility btn-ghost {
+  @apply btn border border-ink-700 text-ink-300 hover:border-ink-600 hover:bg-ink-800 hover:text-ink-100;
+}
+@utility input {
+  @apply w-full rounded-lg border border-ink-700 bg-ink-950 px-3 py-2 text-sm text-ink-100 outline-none
+    placeholder:text-ink-600 focus:border-accent;
+}
+@utility num {
+  font-variant-numeric: tabular-nums;
+}
