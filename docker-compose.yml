@@ -1,0 +1,17 @@
+services:
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      - TZ=Asia/Taipei
+    volumes:
+      - ./data:/data
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      # Only reachable from this computer. Put a reverse proxy with auth in front before exposing it.
+      - "127.0.0.1:8080:80"
