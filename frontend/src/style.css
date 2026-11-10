@@ -47,3 +47,21 @@ html, body {
 @utility num {
   font-variant-numeric: tabular-nums;
 }
+
+/* Tailwind v4 resets buttons to the default cursor; show a pointer on everything clickable. */
+@layer base {
+  button:not(:disabled),
+  [role="button"],
+  [role="radio"],
+  select,
+  summary,
+  input[type="checkbox"],
+  input[type="radio"],
+  input[type="date"],
+  input[type="month"] {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
+}
