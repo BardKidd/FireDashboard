@@ -110,3 +110,24 @@ def test_collect_view_targets_and_radar(db):
     assert row["radar"]["discount_vs_high"] == pytest.approx(0.2)
     # All value is VOO, so target = goal / (ma200 * fx).
     assert row["target_shares"] == pytest.approx(v["goal_amount"] / (400 * 30))
+
+
+def test_old_default_theme_moves_to_ember_once(db_path):
+    from app import database
+    from app.models import GameSettings
+
+    with database.SessionLocal() as s:
+        assert s.get(GameSettings, 1).theme == "ember"
+    # Simulate a database from before the redesign.
+    with database.engine.begin() as conn:
+        conn.exec_driver_sql("UPDATE game_settings SET theme = 'teal'")
+        conn.exec_driver_sql("PRAGMA user_version = 0")
+    database.init_db()
+    with database.SessionLocal() as s:
+        assert s.get(GameSettings, 1).theme == "ember"
+    # A later manual choice of teal survives restarts.
+    with database.engine.begin() as conn:
+        conn.exec_driver_sql("UPDATE game_settings SET theme = 'teal'")
+    database.init_db()
+    with database.SessionLocal() as s:
+        assert s.get(GameSettings, 1).theme == "teal"

@@ -10,5 +10,5 @@ export function applyTheme(themes: Theme[], key: string) {
 }
 
 export function accentColor(): string {
-  return getComputedStyle(document.documentElement).getPropertyValue('--color-accent').trim() || '#2dd4bf'
+  return getComputedStyle(document.documentElement).getPropertyValue('--color-accent').trim() || '#f59e4b'
 }
