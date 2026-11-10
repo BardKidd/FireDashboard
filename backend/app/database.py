@@ -54,6 +54,19 @@ def init_db() -> None:
     with SessionLocal() as db:
         models.ensure_defaults(db)
         db.commit()
+    _migrate()
+
+
+def _migrate() -> None:
+    """One-off data migrations, tracked with SQLite's user_version."""
+    with engine.begin() as conn:
+        version = conn.exec_driver_sql("PRAGMA user_version").scalar() or 0
+        if version < 1:
+            # The campfire redesign made "ember" the default theme. Databases that
+            # still have the old default "teal" move to it once; a later manual
+            # switch back to teal is kept.
+            conn.exec_driver_sql("UPDATE game_settings SET theme = 'ember' WHERE theme = 'teal'")
+            conn.exec_driver_sql("PRAGMA user_version = 1")
 
 
 def get_db():

@@ -98,7 +98,7 @@ const canAfford = (r: RewardRow) => props.game.stars.balance >= r.cost && (r.rep
         <input id="rw-cost" v-model.number="form.cost" class="input" type="number" min="1" step="1" />
         <button class="btn-primary">新增</button>
         <label class="flex items-center gap-2 text-xs text-ink-400 sm:col-span-3">
-          <input v-model="form.repeatable" type="checkbox" class="accent-teal-400" /> 可以重複兌換
+          <input v-model="form.repeatable" type="checkbox" class="accent-[var(--color-accent)]" /> 可以重複兌換
         </label>
       </form>
       <button v-else class="btn-ghost mt-3 w-full" @click="adding = true">＋ 自訂獎勵</button>

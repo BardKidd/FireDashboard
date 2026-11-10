@@ -221,7 +221,7 @@ class GameSettings(Base):
     __tablename__ = "game_settings"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
-    theme: Mapped[str] = mapped_column(String(20), default="teal")
+    theme: Mapped[str] = mapped_column(String(20), default="ember")
     basket_goal: Mapped[str] = mapped_column(String(10), default="coast")  # coast|fire
 
 

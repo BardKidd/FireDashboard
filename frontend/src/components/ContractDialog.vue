@@ -95,7 +95,7 @@ async function remove() {
         <input v-model="form.note" class="input" />
       </label>
       <label v-if="contract" class="flex items-center gap-2 text-sm text-ink-300">
-        <input v-model="form.closed" type="checkbox" class="accent-teal-400" />
+        <input v-model="form.closed" type="checkbox" class="accent-[var(--color-accent)]" />
         已領回（領回的錢請另外記到台幣現金）
       </label>
       <p v-if="error" class="rounded-lg bg-amber-950/50 px-3 py-2 text-sm text-warm" role="alert">{{ error }}</p>
