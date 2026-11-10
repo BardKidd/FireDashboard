@@ -180,6 +180,138 @@ export interface SplitRow {
   ratio: number
 }
 
+// ------------------------------------------------------------------ Phase 2: collecting game
+
+export interface Radar {
+  price: number
+  ma60: number | null
+  high_52w: number | null
+  discount_vs_ma60: number | null
+  extra_vs_ma60: number | null
+  discount_vs_high: number | null
+  extra_vs_high: number | null
+}
+
+export interface ShareEvent {
+  date: string
+  kind: LogKind
+  delta: number
+  total: number
+  note: string | null
+}
+
+export interface CollectRow {
+  symbol: string
+  label: string
+  name: string
+  market: 'US' | 'TW'
+  asset_type: AssetType
+  shares: number
+  unit: number
+  unit_label: string
+  level: number
+  max_level: number
+  next_milestone: number | null
+  next_label: string | null
+  progress_to_next: number | null
+  target_shares: number | null
+  target_is_manual: boolean
+  target_progress: number | null
+  base_price: number | null
+  radar: Radar | null
+  first_date: string | null
+  days_held: number
+  curve: { date: string; shares: number }[]
+  events: ShareEvent[]
+}
+
+export type BasketGoal = 'coast' | 'fire'
+
+export interface Collect {
+  today: string
+  basket_goal: BasketGoal
+  goal_amount: number
+  coast_target: number
+  fire_target: number
+  basket_progress: number | null
+  holdings: CollectRow[]
+}
+
+export interface AchievementRow {
+  key: string
+  category: 'milestone' | 'coast' | 'checkin' | 'streak' | 'dividend' | 'first'
+  title: string
+  detail: string | null
+  symbol: string | null
+  earned_on: string
+  points: number
+}
+
+export interface Theme {
+  key: string
+  name: string
+  level: number
+  accent: string
+  soft: string
+  unlocked: boolean
+}
+
+export interface RewardRow {
+  id: number
+  name: string
+  cost: number
+  repeatable: boolean
+  note: string | null
+  redeemed: boolean
+}
+
+export interface RewardInput {
+  name: string
+  cost: number
+  repeatable: boolean
+  note: string | null
+}
+
+export interface Game {
+  today: string
+  stars: { earned: number; spent: number; balance: number }
+  level: {
+    level: number
+    title: string
+    xp: number
+    current_floor: number
+    next_at: number
+    next_title: { level: number; title: string } | null
+  }
+  checkin: {
+    today: boolean
+    today_note: string | null
+    total_days: number
+    week_streak: number
+    days: string[]
+    quote: string
+  }
+  achievements: AchievementRow[]
+  next_goals: { title: string; progress: number | null; hint: string; points: number }[]
+  themes: Theme[]
+  settings: { theme: string; basket_goal: BasketGoal }
+  rewards: RewardRow[]
+  redemptions: { id: number; reward_id: number; name: string; cost: number; date: string }[]
+}
+
+export interface CheckinReport {
+  date: string
+  points: number
+  bonus: number
+  new_achievements: AchievementRow[]
+  total_days: number
+  week_streak: number
+  since: string | null
+  collected: { symbol: string; delta: number; market: 'US' | 'TW' }[]
+  bargains: { symbol: string; label: string; extra: number }[]
+  quote: string
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch('/api' + path, {
     headers: { 'Content-Type': 'application/json' },
@@ -244,4 +376,13 @@ export const api = {
   updateContract: (id: number, b: ContractInput) => request<ContractInfo>('/contracts/' + id, json('PUT', b)),
   deleteContract: (id: number) => request<{ ok: boolean }>('/contracts/' + id, { method: 'DELETE' }),
   refresh: () => request<{ started: boolean }>('/refresh', { method: 'POST' }),
+  collect: () => request<Collect>('/collect'),
+  game: () => request<Game>('/game'),
+  checkin: (note: string | null) => request<CheckinReport>('/game/checkin', json('POST', { note })),
+  gameSettings: (b: { theme?: string; basket_goal?: BasketGoal }) => request<{ ok: boolean }>('/game/settings', json('PUT', b)),
+  addReward: (b: RewardInput) => request<{ id: number }>('/game/rewards', json('POST', b)),
+  updateReward: (id: number, b: RewardInput) => request<{ ok: boolean }>('/game/rewards/' + id, json('PUT', b)),
+  deleteReward: (id: number) => request<{ ok: boolean }>('/game/rewards/' + id, { method: 'DELETE' }),
+  redeem: (id: number) => request<{ id: number }>('/game/rewards/' + id + '/redeem', { method: 'POST' }),
+  undoRedemption: (id: number) => request<{ ok: boolean }>('/game/redemptions/' + id, { method: 'DELETE' }),
 }
