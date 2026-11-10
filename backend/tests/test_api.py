@@ -23,3 +23,19 @@ def test_end_to_end(client):
     assert "0050.TW" in s["missing_prices"]
     assert client.get("/api/projection").json()["series"]
     assert client.delete("/api/holdings/0050.TW").json() == {"archived": True}
+
+
+def test_game_endpoints(client):
+    g = client.get("/api/game").json()
+    assert g["checkin"]["today"] is False and g["level"]["level"] == 1
+    r = client.post("/api/game/checkin", json={"note": "hi"})
+    assert r.status_code == 200, r.text
+    assert client.post("/api/game/checkin", json={}).status_code == 400
+    rid = client.post("/api/game/rewards", json={"name": "電影", "cost": 25}).json()["id"]
+    assert client.post(f"/api/game/rewards/{rid}/redeem").status_code == 201
+    assert client.post(f"/api/game/rewards/{rid}/redeem").status_code == 400  # 30 - 25 = 5 left
+    g = client.get("/api/game").json()
+    assert g["stars"]["balance"] == 5 and g["checkin"]["today"] is True
+    assert client.delete(f"/api/game/redemptions/{g['redemptions'][0]['id']}").status_code == 200
+    assert client.put("/api/game/settings", json={"theme": "gold"}).status_code == 400
+    assert client.get("/api/collect").json()["holdings"] == []
