@@ -16,12 +16,12 @@ const chart = shallowRef<echarts.ECharts>()
 const range = ref<'10y' | 'all'>('all')
 
 const COLORS = {
-  history: '#2dd4bf',
-  withC: '#93c5fd',
-  noC: '#8393b3',
-  coast: '#fbbf24',
-  grid: '#24324f',
-  axis: '#8393b3',
+  history: '#f59e4b',
+  withC: '#9cc3c9',
+  noC: '#a8968a',
+  coast: '#f2c46d',
+  grid: '#3a2d23',
+  axis: '#a8968a',
 }
 
 const data = computed(() => {
@@ -69,15 +69,15 @@ function option(): echarts.EChartsCoreOption {
       icon: 'roundRect',
       itemWidth: 14,
       itemHeight: 4,
-      textStyle: { color: '#a9b6cf', fontSize: 12 },
+      textStyle: { color: '#cdbcae', fontSize: 12 },
     },
     tooltip: {
       trigger: 'axis',
-      backgroundColor: '#111a2e',
-      borderColor: '#34456a',
-      textStyle: { color: '#e6ecf7', fontSize: 12 },
+      backgroundColor: '#1e1712',
+      borderColor: '#57473b',
+      textStyle: { color: '#f2e8dc', fontSize: 12 },
       valueFormatter: (v: unknown) => (typeof v === 'number' ? wan(v) : '—'),
-      axisPointer: { lineStyle: { color: '#34456a' } },
+      axisPointer: { lineStyle: { color: '#57473b' } },
     },
     xAxis: {
       type: 'category',
@@ -101,8 +101,8 @@ function option(): echarts.EChartsCoreOption {
             ? {
                 symbol: 'circle',
                 symbolSize: 10,
-                itemStyle: { color: COLORS.coast, borderColor: '#0b1220', borderWidth: 2 },
-                label: { show: true, position: 'top', color: '#fbbf24', fontSize: 12, formatter: '達成 ' + ym(hit) },
+                itemStyle: { color: COLORS.coast, borderColor: '#15100d', borderWidth: 2 },
+                label: { show: true, position: 'top', color: '#f2c46d', fontSize: 12, formatter: '達成 ' + ym(hit) },
                 data: [{ coord: [hitIdx, d.withC[hitIdx]] }],
               }
             : undefined,
@@ -114,8 +114,8 @@ function option(): echarts.EChartsCoreOption {
         symbolSize: 8,
         lineStyle: { color: COLORS.history, width: 2.5 },
         areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-          { offset: 0, color: 'rgba(45,212,191,0.25)' },
-          { offset: 1, color: 'rgba(45,212,191,0)' },
+          { offset: 0, color: 'rgba(245,158,75,0.25)' },
+          { offset: 1, color: 'rgba(245,158,75,0)' },
         ]) },
       }),
     ],

@@ -1,20 +1,21 @@
 @import "tailwindcss";
 
-/* Calm palette: no red/green for gains and losses; one teal accent. */
+/* Campfire palette: warm night neutrals, one ember accent, no red/green for gains and losses. */
 @theme {
-  --color-ink-950: #0b1220;
-  --color-ink-900: #111a2e;
-  --color-ink-800: #18233b;
-  --color-ink-700: #24324f;
-  --color-ink-600: #34456a;
-  --color-ink-400: #8393b3;
-  --color-ink-300: #a9b6cf;
-  --color-ink-100: #e6ecf7;
-  --color-accent: #2dd4bf;
-  --color-accent-soft: #134e4a;
-  --color-calm: #93c5fd;
-  --color-warm: #fbbf24;
-  --font-sans: "Inter", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --color-ink-950: #15100d;
+  --color-ink-900: #1e1712;
+  --color-ink-800: #2a2019;
+  --color-ink-700: #3a2d23;
+  --color-ink-600: #57473b;
+  --color-ink-400: #a8968a;
+  --color-ink-300: #cdbcae;
+  --color-ink-100: #f2e8dc;
+  --color-accent: #f59e4b;
+  --color-accent-soft: #4a2410;
+  --color-calm: #9cc3c9;
+  --color-warm: #f2c46d;
+  --font-sans: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --font-display: "LXGW WenKai TC", "Kaiti TC", "BiauKai", "Noto Serif TC", serif;
 }
 
 html, body {
@@ -23,9 +24,20 @@ html, body {
   font-family: var(--font-sans);
   font-feature-settings: "tnum";
 }
+body {
+  /* Faint firelight from above the fold. */
+  background-image: radial-gradient(70rem 40rem at 50% -8rem, rgba(245, 158, 75, 0.09), transparent 70%);
+  background-repeat: no-repeat;
+}
+:focus-visible {
+  outline-color: var(--color-accent);
+}
 
 @utility card {
-  @apply rounded-2xl border border-ink-700/70 bg-ink-900 p-5;
+  @apply rounded-[1.25rem] bg-ink-900/80 p-5 shadow-[inset_0_1px_0_rgba(255,220,180,0.05)];
+}
+@utility display {
+  font-family: var(--font-display);
 }
 @utility label {
   @apply text-xs font-medium tracking-wide text-ink-400;
@@ -35,7 +47,7 @@ html, body {
     disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-accent;
 }
 @utility btn-primary {
-  @apply btn bg-accent text-ink-950 hover:bg-teal-300;
+  @apply btn bg-accent text-ink-950 hover:brightness-110;
 }
 @utility btn-ghost {
   @apply btn border border-ink-700 text-ink-300 hover:border-ink-600 hover:bg-ink-800 hover:text-ink-100;

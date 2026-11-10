@@ -70,6 +70,7 @@ TITLES = [
 
 # key, name, level needed, accent, accent-soft
 THEMES = [
+    ("ember", "營火", 1, "#f59e4b", "#4a2410"),
     ("teal", "青綠", 1, "#2dd4bf", "#134e4a"),
     ("orange", "暖陽", 3, "#fb923c", "#7c2d12"),
     ("violet", "暮紫", 5, "#a78bfa", "#4c1d95"),

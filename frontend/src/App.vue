@@ -20,7 +20,8 @@ import HoldingEditDialog from './components/HoldingEditDialog.vue'
 import HoldingsTable from './components/HoldingsTable.vue'
 import ShareLogDialog from './components/ShareLogDialog.vue'
 import StressCard from './components/StressCard.vue'
-import SummaryCards from './components/SummaryCards.vue'
+import CampfireHero from './components/CampfireHero.vue'
+import SoundToggle from './components/SoundToggle.vue'
 import TrajectoryChart from './components/TrajectoryChart.vue'
 import CollectView from './components/collect/CollectView.vue'
 import { applyTheme } from './theme'
@@ -144,11 +145,12 @@ const errorDetail = computed(() =>
   <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:py-8">
     <header class="mb-6 flex flex-wrap items-center justify-between gap-4">
       <div class="flex items-center gap-3">
-        <div class="grid h-9 w-9 place-items-center rounded-xl bg-accent-soft text-accent" aria-hidden="true">
-          <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l5-5 4 3 8-9" /><path d="M15 6h5v5" /></svg>
-        </div>
+        <svg viewBox="0 0 32 32" class="h-9 w-9 text-accent" aria-hidden="true">
+          <path d="M16 3C18 10 25 13 25 21a9 9 0 0 1-18 0c0-4 2-6 4-8 0 3 1 5 3 5-1-6 1-11 2-15z" fill="currentColor" />
+          <path d="M16 15c1 3 4 4 4 7a4 4 0 0 1-8 0c0-2 1-3 2-4 0 1 .5 2 1.5 2-.5-2 0-4 .5-5z" fill="#ffd36e" />
+        </svg>
         <div>
-          <h1 class="text-lg font-semibold tracking-tight">FireDashboard</h1>
+          <h1 class="display text-xl tracking-tight">FireDashboard</h1>
           <p class="text-xs text-ink-400">
             <span>{{ updatedLabel }}</span>
             <span v-if="hasErrors" class="ml-2 cursor-help text-warm" :title="errorDetail">・部分標的更新失敗</span>
@@ -162,13 +164,14 @@ const errorDetail = computed(() =>
             :key="v"
             role="tab"
             :aria-selected="view === v"
-            class="rounded-md px-3 py-1 font-medium transition"
+            class="display rounded-md px-3 py-1 transition"
             :class="view === v ? 'bg-accent text-ink-950' : 'text-ink-300 hover:text-ink-100'"
             @click="setView(v)"
           >
             {{ v === 'dashboard' ? '儀表板' : '收集冊' }}
           </button>
         </div>
+        <SoundToggle />
         <button class="btn-ghost" :disabled="status?.refreshing" @click="refreshNow">
           <svg viewBox="0 0 20 20" class="h-4 w-4" :class="status?.refreshing ? 'animate-spin' : ''" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 10a6 6 0 1 1-1.8-4.3M16 3v4h-4" /></svg>
           更新報價
@@ -191,8 +194,8 @@ const errorDetail = computed(() =>
     </p>
 
     <CollectView v-if="view === 'collect'" ref="collectView" />
-    <div v-else-if="summary && holdings && projection" class="grid gap-4">
-      <SummaryCards :summary="summary" />
+    <div v-else-if="summary && holdings && projection" class="grid grid-cols-[minmax(0,1fr)] gap-4">
+      <CampfireHero :summary="summary" :holdings="holdings" />
       <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
         <TrajectoryChart :projection="projection" :history="history" :time-to-coast="summary.time_to_coast" />
         <StressCard :summary="summary" />
