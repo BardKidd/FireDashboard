@@ -13,7 +13,7 @@ const fxGap = computed(() => (fx.value.live && fx.value.ma200 ? fx.value.live / 
   <section class="card flex flex-col gap-5">
     <div>
       <h2 class="text-sm font-semibold">抗跌安全邊際</h2>
-      <p class="mt-1 text-xs text-ink-400">組合 beta {{ s.beta.toFixed(2) }}（現金與債券為 0，槓桿 ETF 依倍數）</p>
+      <p class="mt-1 text-xs text-ink-400">組合 beta {{ s.beta.toFixed(2) }}（現金、債券與約定存款為 0，槓桿 ETF 依倍數）</p>
     </div>
 
     <div>

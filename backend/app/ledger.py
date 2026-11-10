@@ -13,7 +13,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from . import calculator
+from . import calculator, contracts
 from .models import (
     CASH_SYMBOLS,
     CASH_TWD,
@@ -22,6 +22,7 @@ from .models import (
     CorporateAction,
     Dividend,
     FireConfig,
+    FixedContract,
     Holding,
     MarketQuote,
     PortfolioSnapshot,
@@ -267,6 +268,7 @@ def rebuild_snapshots(
         db.flush()
         return
     holdings = list(db.scalars(select(Holding)))
+    fixed = [c for c in db.scalars(select(FixedContract)) if not c.closed]
     fx = prices.get(FX_SYMBOL, PriceSeries([]))
     params = calculator.FireParams.from_config(cfg)
     for day in _business_days(date.fromisoformat(first), today):
@@ -306,6 +308,7 @@ def rebuild_snapshots(
                 cash_twd += val
         if not complete or (rate is None and usd):
             continue
+        twd += sum(contracts.value_on(c, day) for c in fixed)
         total = twd + (usd * rate if rate else 0.0)
         months_left = max(
             0, params.target_retire_age * 12 - calculator.age_in_months(params, day)
@@ -430,6 +433,36 @@ def position_rows(db: Session, cfg: FireConfig) -> dict:
                 "live_value_twd": live_value_twd,
                 "cost_native": cost,
                 "pnl_native": native - cost if native is not None and cost else None,
+            }
+        )
+    today = today_tw()
+    for c in db.scalars(select(FixedContract).order_by(FixedContract.id)):
+        ci = contracts.info(c, today)
+        rows.append(
+            {
+                "symbol": f"CONTRACT-{c.id}",
+                "name": c.name,
+                "market": "CONTRACT",
+                "asset_type": "contract",
+                "currency": "TWD",
+                "shares": ci["deposited"],
+                "avg_cost": None,
+                "stress_beta": 0.0,
+                "target_shares": None,
+                "archived": c.closed,
+                "price": None,
+                "price_date": None,
+                "prev_close": None,
+                "ma20": None,
+                "ma60": None,
+                "ma200": None,
+                "high_52w": None,
+                "value_native": ci["value"] if not c.closed else 0.0,
+                "value_twd": ci["value"] if not c.closed else 0.0,
+                "live_value_twd": ci["value"] if not c.closed else 0.0,
+                "cost_native": None,
+                "pnl_native": None,
+                "contract": ci,
             }
         )
     total = sum(r["value_twd"] or 0 for r in rows)

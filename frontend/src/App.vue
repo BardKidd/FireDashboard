@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import {
   api,
   type Config,
+  type ContractInfo,
   type DividendRow,
   type HistoryPoint,
   type Holdings,
@@ -13,6 +14,7 @@ import {
 } from './api'
 import AddHoldingDialog from './components/AddHoldingDialog.vue'
 import ConfigModal from './components/ConfigModal.vue'
+import ContractDialog from './components/ContractDialog.vue'
 import DividendsCard from './components/DividendsCard.vue'
 import HoldingEditDialog from './components/HoldingEditDialog.vue'
 import HoldingsTable from './components/HoldingsTable.vue'
@@ -34,6 +36,12 @@ const showConfig = ref(false)
 const showAdd = ref(false)
 const recordFor = ref<Position | null>(null)
 const editFor = ref<Position | null>(null)
+const contractFor = ref<ContractInfo | 'new' | null>(null)
+
+function onEdit(p: Position) {
+  if (p.contract) contractFor.value = p.contract
+  else editFor.value = p
+}
 
 async function loadAll() {
   try {
@@ -150,7 +158,7 @@ const errorDetail = computed(() =>
         <TrajectoryChart :projection="projection" :history="history" :time-to-coast="summary.time_to_coast" />
         <StressCard :summary="summary" />
       </div>
-      <HoldingsTable :holdings="holdings" @add="showAdd = true" @record="recordFor = $event" @edit="editFor = $event" />
+      <HoldingsTable :holdings="holdings" @add="showAdd = true" @add-contract="contractFor = 'new'" @record="recordFor = $event" @edit="onEdit" />
       <DividendsCard :dividends="dividends" />
     </div>
     <div v-else-if="!loadError" class="grid gap-4" aria-busy="true">
@@ -167,6 +175,12 @@ const errorDetail = computed(() =>
     <ConfigModal v-if="showConfig && config" :config="config" @close="showConfig = false" @saved="loadAll" />
     <AddHoldingDialog v-if="showAdd" @close="showAdd = false" @added="afterAdd" />
     <ShareLogDialog v-if="recordFor" :position="recordFor" @close="recordFor = null" @changed="loadAll" />
+    <ContractDialog
+      v-if="contractFor"
+      :contract="contractFor === 'new' ? undefined : contractFor"
+      @close="contractFor = null"
+      @changed="loadAll"
+    />
     <HoldingEditDialog v-if="editFor" :position="editFor" @close="editFor = null" @changed="loadAll" />
   </div>
 </template>

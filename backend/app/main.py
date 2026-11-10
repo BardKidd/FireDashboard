@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from . import calculator, database, fetcher, ledger
+from . import calculator, contracts, database, fetcher, ledger, seed
 from .database import get_db, write_lock
 from .models import (
     CASH_SYMBOLS,
@@ -21,6 +21,7 @@ from .models import (
     CorporateAction,
     Dividend,
     FetchStatus,
+    FixedContract,
     Holding,
     PortfolioSnapshot,
     PriceHistory,
@@ -106,7 +107,7 @@ def _summary(db: Session) -> dict:
         )
     s["day_change_twd"] = (last.total_value_twd - prev.total_value_twd) if last and prev else None
     s["missing_prices"] = [
-        r["symbol"] for r in pos["rows"] if r["market"] != "CASH" and r["shares"] > 0 and r["price"] is None
+        r["symbol"] for r in pos["rows"] if r["market"] in ("US", "TW") and r["shares"] > 0 and r["price"] is None
     ]
     return s
 
@@ -367,6 +368,76 @@ def create_split(body: SplitIn, db: Session = Depends(get_db)):
         _rebuild(db)
         db.commit()
     return {"ok": True}
+
+
+# ------------------------------------------------------------------ fixed contracts
+
+class ContractIn(BaseModel):
+    name: str = Field(min_length=1)
+    start_month: str = Field(pattern=r"^\d{4}-(0[1-9]|1[0-2])$")
+    monthly_deposit: float = Field(gt=0)
+    term_months: int = Field(gt=0, le=1200)
+    payout: float = Field(gt=0)
+    valuation: Literal["accrued", "deposited"] = "accrued"
+    closed: bool = False
+    note: str | None = None
+
+
+@app.get("/api/contracts")
+def list_contracts(db: Session = Depends(get_db)):
+    today = ledger.today_tw()
+    return [contracts.info(c, today) for c in db.scalars(select(FixedContract).order_by(FixedContract.id))]
+
+
+@app.post("/api/contracts", status_code=201)
+def create_contract(body: ContractIn, db: Session = Depends(get_db)):
+    with write_lock:
+        c = FixedContract(**body.model_dump())
+        db.add(c)
+        db.flush()
+        _rebuild(db)
+        db.commit()
+        return contracts.info(c, ledger.today_tw())
+
+
+@app.put("/api/contracts/{cid}")
+def update_contract(cid: int, body: ContractIn, db: Session = Depends(get_db)):
+    with write_lock:
+        c = db.get(FixedContract, cid)
+        if c is None:
+            raise HTTPException(404, "找不到約定存款")
+        for k, v in body.model_dump().items():
+            setattr(c, k, v)
+        _rebuild(db)
+        db.commit()
+        return contracts.info(c, ledger.today_tw())
+
+
+@app.delete("/api/contracts/{cid}")
+def delete_contract(cid: int, db: Session = Depends(get_db)):
+    with write_lock:
+        c = db.get(FixedContract, cid)
+        if c is None:
+            raise HTTPException(404, "找不到約定存款")
+        db.delete(c)
+        _rebuild(db)
+        db.commit()
+    return {"ok": True}
+
+
+# ------------------------------------------------------------------ import
+
+@app.post("/api/import")
+def import_data(body: dict, db: Session = Depends(get_db)):
+    """Import holdings and contracts from the seed JSON format (see seed.py)."""
+    try:
+        with write_lock:
+            report = seed.import_data(db, body)
+    except (ValueError, ledger.LedgerError) as exc:
+        db.rollback()
+        raise HTTPException(400, str(exc)) from exc
+    refresh_in_background()
+    return report
 
 
 # ------------------------------------------------------------------ dashboard data

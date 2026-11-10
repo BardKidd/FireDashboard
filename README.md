@@ -15,6 +15,21 @@ docker compose up -d --build
 
 > 只綁定 `127.0.0.1`，沒有登入機制。要放到 NAS 或外網前，請先加上有帳密的 reverse proxy。
 
+## 匯入初始持倉
+
+把持倉 JSON（格式見 `backend/app/seed.py` 開頭說明）放到 `./data/initial_holdings.json`，然後：
+
+```bash
+docker compose exec backend python -m app.seed /data/initial_holdings.json
+```
+
+已存在的標的與同名約定存款會略過，重跑不會重複。個人持倉檔請不要 commit（`data/` 已在 .gitignore）。
+
+## 約定存款
+
+「固定存、到期領固定金額」的約定（例如每月存 1 萬、10 年後領 200 萬）可以在持倉表按「＋ 約定存款」新增。
+系統會算出隱含年報酬，依此計入總資產（也可改成只算本金），壓力測試 beta 為 0。到期領回後勾選「已領回」，再把錢記到台幣現金。
+
 ## 使用方式
 
 1. 右上「參數設定」填入出生年月、退休年齡、年開銷、SWR、報酬率、通膨與每月投入。
