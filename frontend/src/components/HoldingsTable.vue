@@ -4,7 +4,7 @@ import type { Holdings, Position } from '../api'
 import { money, pct, price, shares, wan } from '../format'
 
 const props = defineProps<{ holdings: Holdings }>()
-const emit = defineEmits<{ record: [p: Position]; edit: [p: Position]; add: [] }>()
+const emit = defineEmits<{ record: [p: Position]; edit: [p: Position]; add: []; addContract: [] }>()
 
 const showPnl = ref(false)
 const showArchived = ref(false)
@@ -13,7 +13,8 @@ const rows = computed(() => props.holdings.rows.filter((r) => showArchived.value
 const archivedCount = computed(() => props.holdings.rows.filter((r) => r.archived).length)
 
 const TYPE_LABEL: Record<string, string> = { equity: '股票', leveraged: '槓桿', bond: '債券', cash: '現金' }
-const MARKET_LABEL: Record<string, string> = { US: '美股', TW: '台股', CASH: '現金' }
+const MARKET_LABEL: Record<string, string> = { US: '美股', TW: '台股', CASH: '現金', CONTRACT: '約定存款' }
+const named = (r: Position) => r.market === 'CASH' || r.market === 'CONTRACT'
 </script>
 
 <template>
@@ -30,6 +31,7 @@ const MARKET_LABEL: Record<string, string> = { US: '美股', TW: '台股', CASH:
         <label v-if="archivedCount" class="flex cursor-pointer items-center gap-2 text-xs text-ink-400">
           <input v-model="showArchived" type="checkbox" class="accent-teal-400" /> 顯示已封存（{{ archivedCount }}）
         </label>
+        <button class="btn-ghost" @click="emit('addContract')">＋ 約定存款</button>
         <button class="btn-primary" @click="emit('add')">
           <svg viewBox="0 0 20 20" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 4v12M4 10h12" /></svg>
           新增標的
@@ -59,19 +61,28 @@ const MARKET_LABEL: Record<string, string> = { US: '美股', TW: '台股', CASH:
           >
             <td class="px-5 py-3">
               <div class="flex items-center gap-2">
-                <span class="font-medium">{{ r.market === 'CASH' ? r.name : r.symbol.replace(/\.TWO?$/, '') }}</span>
+                <span class="font-medium">{{ named(r) ? r.name : r.symbol.replace(/\.TWO?$/, '') }}</span>
                 <span class="rounded bg-ink-800 px-1.5 py-0.5 text-[11px] text-ink-400">{{ MARKET_LABEL[r.market] }}</span>
-                <span v-if="r.asset_type !== 'equity' && r.asset_type !== 'cash'" class="rounded bg-ink-800 px-1.5 py-0.5 text-[11px] text-calm">
+                <span v-if="r.asset_type === 'leveraged' || r.asset_type === 'bond'" class="rounded bg-ink-800 px-1.5 py-0.5 text-[11px] text-calm">
                   {{ TYPE_LABEL[r.asset_type] }}
                 </span>
               </div>
-              <p v-if="r.market !== 'CASH'" class="mt-0.5 max-w-[16rem] truncate text-xs text-ink-400">{{ r.name }}</p>
+              <p v-if="r.contract" class="mt-0.5 text-xs text-ink-400">每月 {{ money(r.contract.monthly_deposit) }}・隱含年報酬 {{ pct(r.contract.implied_annual_rate) }}</p>
+              <p v-else-if="r.market !== 'CASH'" class="mt-0.5 max-w-[16rem] truncate text-xs text-ink-400">{{ r.name }}</p>
             </td>
             <td class="num px-3 py-3 text-right">
-              {{ r.market === 'CASH' ? money(r.shares, r.currency) : shares(r.shares, r.market) }}
+              <template v-if="r.contract">
+                {{ r.contract.paid_months }} / {{ r.contract.term_months }} 期
+                <p class="text-[11px] text-ink-400">已存 {{ wan(r.contract.deposited) }}</p>
+              </template>
+              <template v-else>{{ r.market === 'CASH' ? money(r.shares, r.currency) : shares(r.shares, r.market) }}</template>
             </td>
             <td class="num px-3 py-3 text-right">
-              <template v-if="r.market !== 'CASH'">
+              <template v-if="r.contract">
+                到期 {{ wan(r.contract.payout) }}
+                <p class="whitespace-nowrap text-[11px] text-ink-400">{{ r.contract.payout_month }} 領回</p>
+              </template>
+              <template v-else-if="r.market !== 'CASH'">
                 {{ price(r.price, r.currency) }}
                 <p class="whitespace-nowrap text-[11px] text-ink-400">{{ r.price_date ?? '等待抓價' }}</p>
               </template>
@@ -80,7 +91,7 @@ const MARKET_LABEL: Record<string, string> = { US: '美股', TW: '台股', CASH:
             <td class="num px-3 py-3 text-right">{{ r.value_twd != null ? money(r.value_twd) : '—' }}</td>
             <td class="num px-3 py-3 text-right text-ink-300">{{ pct(r.weight) }}</td>
             <td v-if="showPnl" class="num px-3 py-3 text-right text-ink-300">
-              <template v-if="r.avg_cost && r.market !== 'CASH'">
+              <template v-if="r.avg_cost && !named(r)">
                 {{ price(r.avg_cost, r.currency) }}
                 <p class="text-[11px] text-ink-400">
                   {{ r.pnl_native != null ? (r.pnl_native >= 0 ? '+' : '') + money(r.pnl_native, r.currency) : '—' }}
@@ -89,7 +100,7 @@ const MARKET_LABEL: Record<string, string> = { US: '美股', TW: '台股', CASH:
               <span v-else class="text-ink-600">—</span>
             </td>
             <td class="px-5 py-3 text-right whitespace-nowrap">
-              <button class="btn-ghost" @click="emit('record', r)">記錄</button>
+              <button v-if="!r.contract" class="btn-ghost" @click="emit('record', r)">記錄</button>
               <button class="btn ml-1 text-ink-400 hover:text-ink-100" :aria-label="'編輯 ' + r.symbol" @click="emit('edit', r)">
                 <svg viewBox="0 0 20 20" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M13.5 3.5l3 3L7 16H4v-3z" /></svg>
               </button>

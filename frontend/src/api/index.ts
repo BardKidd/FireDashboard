@@ -1,5 +1,5 @@
 export type FxMode = 'live' | 'ma200' | 'custom'
-export type AssetType = 'equity' | 'leveraged' | 'bond' | 'cash'
+export type AssetType = 'equity' | 'leveraged' | 'bond' | 'cash' | 'contract'
 export type LogKind = 'buy' | 'sell' | 'adjust' | 'deposit' | 'withdraw'
 
 export interface Config {
@@ -31,7 +31,7 @@ export interface FxInfo {
 export interface Position {
   symbol: string
   name: string
-  market: 'US' | 'TW' | 'CASH'
+  market: 'US' | 'TW' | 'CASH' | 'CONTRACT'
   asset_type: AssetType
   currency: 'USD' | 'TWD'
   shares: number
@@ -52,6 +52,29 @@ export interface Position {
   cost_native: number | null
   pnl_native: number | null
   weight: number
+  contract?: ContractInfo
+}
+
+export interface ContractInput {
+  name: string
+  start_month: string
+  monthly_deposit: number
+  term_months: number
+  payout: number
+  valuation: 'accrued' | 'deposited'
+  closed: boolean
+  note: string | null
+}
+
+export interface ContractInfo extends ContractInput {
+  id: number
+  paid_months: number
+  deposited: number
+  accrued: number
+  value: number
+  matured: boolean
+  payout_month: string
+  implied_annual_rate: number
 }
 
 export interface Holdings {
@@ -189,7 +212,7 @@ export const api = {
     shares: number
     date?: string
     avg_cost?: number | null
-    asset_type?: Exclude<AssetType, 'cash'> | null
+    asset_type?: Exclude<AssetType, 'cash' | 'contract'> | null
   }) => request<{ symbol: string }>('/holdings', json('POST', b)),
   patchHolding: (
     symbol: string,
@@ -217,5 +240,8 @@ export const api = {
   history: () => request<HistoryPoint[]>('/history'),
   dividends: () => request<DividendRow[]>('/dividends'),
   status: () => request<Status>('/status'),
+  addContract: (b: ContractInput) => request<ContractInfo>('/contracts', json('POST', b)),
+  updateContract: (id: number, b: ContractInput) => request<ContractInfo>('/contracts/' + id, json('PUT', b)),
+  deleteContract: (id: number) => request<{ ok: boolean }>('/contracts/' + id, { method: 'DELETE' }),
   refresh: () => request<{ started: boolean }>('/refresh', { method: 'POST' }),
 }

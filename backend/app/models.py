@@ -148,6 +148,23 @@ class PortfolioSnapshot(Base):
     coast_target_twd: Mapped[float | None] = mapped_column(Float, nullable=True)
 
 
+class FixedContract(Base):
+    """A fixed-payout savings agreement, e.g. deposit 5,000 TWD a month for
+    60 months and receive 350,000 TWD at the end."""
+
+    __tablename__ = "fixed_contracts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(100))
+    start_month: Mapped[str] = mapped_column(String(7))  # YYYY-MM of the first deposit
+    monthly_deposit: Mapped[float] = mapped_column(Float)
+    term_months: Mapped[int] = mapped_column(Integer)
+    payout: Mapped[float] = mapped_column(Float)
+    valuation: Mapped[str] = mapped_column(String(10), default="accrued")  # accrued|deposited
+    closed: Mapped[bool] = mapped_column(Boolean, default=False)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
 class FetchStatus(Base):
     __tablename__ = "fetch_status"
 

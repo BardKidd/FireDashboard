@@ -11,7 +11,7 @@ const name = ref('')
 const shares = ref<number | null>(null)
 const day = ref(todayISO())
 const avgCost = ref<number | null>(null)
-const assetType = ref<Exclude<AssetType, 'cash'> | ''>('')
+const assetType = ref<Exclude<AssetType, 'cash' | 'contract'> | ''>('')
 const busy = ref(false)
 const error = ref('')
 
