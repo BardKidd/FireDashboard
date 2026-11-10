@@ -13,5 +13,6 @@ services:
     depends_on:
       - backend
     ports:
-      # Only reachable from this computer. Put a reverse proxy with auth in front before exposing it.
-      - "127.0.0.1:8080:80"
+      # Set FIRE_PORT / FIRE_BIND in .env (see .env.example).
+      # The default 127.0.0.1 is reachable only from this machine; 0.0.0.0 opens it to the network with no login.
+      - "${FIRE_BIND:-127.0.0.1}:${FIRE_PORT:-8080}:80"

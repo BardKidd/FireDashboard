@@ -9,7 +9,7 @@
 docker compose up -d --build
 ```
 
-打開 <http://localhost:8080>。資料庫在 `./data/fire.db`，備份只要複製這個檔案。
+打開 <http://localhost:8080>。埠號被占用或想從別台電腦連線，複製 `.env.example` 成 `.env` 改 `FIRE_PORT` / `FIRE_BIND`。資料庫在 `./data/fire.db`，備份只要複製這個檔案。
 
 第一次啟動後端會抓近 2 年的報價、股息與匯率；之後每天 06:30（美股收盤後）與 14:30（台股收盤後）自動更新，重開機或 Docker 停機幾天後，啟動時也會自動補齊。
 
