@@ -71,7 +71,7 @@ async function remove() {
         </label>
         <label class="grid gap-1">
           <span class="label">每月存入（台幣）</span>
-          <input v-model.number="form.monthly_deposit" type="number" min="1" step="1000" required class="input num" />
+          <input v-model.number="form.monthly_deposit" type="number" min="1" step="any" required class="input num" />
         </label>
         <label class="grid gap-1">
           <span class="label">共幾期（月）</span>
@@ -79,7 +79,7 @@ async function remove() {
         </label>
         <label class="grid gap-1">
           <span class="label">到期領回（台幣）</span>
-          <input v-model.number="form.payout" type="number" min="1" step="10000" required class="input num" />
+          <input v-model.number="form.payout" type="number" min="1" step="any" required class="input num" />
         </label>
       </div>
       <p class="text-xs text-ink-400">隱含年報酬約 {{ pct(impliedRate) }}（每月月初存入，最後一期的下個月領回）</p>

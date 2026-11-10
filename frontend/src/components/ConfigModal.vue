@@ -58,23 +58,23 @@ async function save() {
         <legend class="label mb-2">退休目標與假設</legend>
         <label class="grid gap-1">
           <span class="label">退休年開銷（今日台幣）</span>
-          <input v-model.number="form.annual_expense_twd" type="number" min="1" step="1000" required class="input num" />
+          <input v-model.number="form.annual_expense_twd" type="number" min="1" step="any" required class="input num" />
         </label>
         <label class="grid gap-1">
           <span class="label">安全提領率 SWR（%）</span>
-          <input v-model.number="form.swr" type="number" step="0.1" min="0.1" max="99" required class="input num" />
+          <input v-model.number="form.swr" type="number" step="any" min="0.1" max="99" required class="input num" />
         </label>
         <label class="grid gap-1">
           <span class="label">預期名目報酬（%／年）</span>
-          <input v-model.number="form.expected_nominal_return" type="number" step="0.1" required class="input num" />
+          <input v-model.number="form.expected_nominal_return" type="number" step="any" required class="input num" />
         </label>
         <label class="grid gap-1">
           <span class="label">通膨率（%／年）</span>
-          <input v-model.number="form.inflation_rate" type="number" step="0.1" required class="input num" />
+          <input v-model.number="form.inflation_rate" type="number" step="any" required class="input num" />
         </label>
         <label class="grid gap-1">
           <span class="label">每月定期定額（台幣）</span>
-          <input v-model.number="form.monthly_contribution_twd" type="number" min="0" step="1000" required class="input num" />
+          <input v-model.number="form.monthly_contribution_twd" type="number" min="0" step="any" required class="input num" />
         </label>
         <label class="flex items-center gap-2 self-end pb-2 text-sm text-ink-300">
           <input v-model="form.contribution_indexed" type="checkbox" class="accent-teal-400" />
@@ -97,7 +97,7 @@ async function save() {
           <input
             v-model.number="form.custom_fx_rate"
             type="number"
-            step="0.01"
+            step="any"
             min="1"
             class="input num"
             :disabled="form.fx_mode !== 'custom'"
@@ -107,7 +107,7 @@ async function save() {
         </label>
         <label class="grid gap-1">
           <span class="label">壓力測試大盤跌幅（%）</span>
-          <input v-model.number="form.stress_drop" type="number" step="1" min="1" max="100" required class="input num" />
+          <input v-model.number="form.stress_drop" type="number" step="any" min="1" max="100" required class="input num" />
         </label>
       </fieldset>
 
@@ -115,15 +115,15 @@ async function save() {
         <legend class="label mb-2">股息稅費</legend>
         <label class="grid gap-1">
           <span class="label">美股股息預扣稅（%）</span>
-          <input v-model.number="form.us_dividend_tax" type="number" step="0.1" min="0" max="99" required class="input num" />
+          <input v-model.number="form.us_dividend_tax" type="number" step="any" min="0" max="99" required class="input num" />
         </label>
         <label class="grid gap-1">
           <span class="label">二代健保補充保費（%）</span>
-          <input v-model.number="form.tw_nhi_rate" type="number" step="0.01" min="0" max="99" required class="input num" />
+          <input v-model.number="form.tw_nhi_rate" type="number" step="any" min="0" max="99" required class="input num" />
         </label>
         <label class="grid gap-1">
           <span class="label">單筆股息達多少才扣（台幣）</span>
-          <input v-model.number="form.tw_nhi_threshold" type="number" step="1000" min="0" required class="input num" />
+          <input v-model.number="form.tw_nhi_threshold" type="number" step="any" min="0" required class="input num" />
         </label>
       </fieldset>
       <p v-if="error" class="rounded-lg bg-amber-950/50 px-3 py-2 text-sm text-warm" role="alert">{{ error }}</p>

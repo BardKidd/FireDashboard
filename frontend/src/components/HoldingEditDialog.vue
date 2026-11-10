@@ -86,7 +86,7 @@ async function addSplit() {
         </label>
         <label class="grid gap-1">
           <span class="label">壓力測試 beta</span>
-          <input v-model.number="beta" type="number" step="0.1" class="input num" />
+          <input v-model.number="beta" type="number" step="any" class="input num" />
         </label>
         <label class="grid gap-1">
           <span class="label">平均成本（原幣）</span>
