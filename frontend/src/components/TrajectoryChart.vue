@@ -41,6 +41,9 @@ const data = computed(() => {
   }
 })
 
+const historyMonths = computed(() => data.value.history.filter((v) => v != null).length)
+const historyStart = computed(() => props.history[0]?.date ?? null)
+
 function option(): echarts.EChartsCoreOption {
   const d = data.value
   const hit = props.timeToCoast.status === 'reachable' ? props.timeToCoast.month : null
@@ -105,6 +108,10 @@ function option(): echarts.EChartsCoreOption {
             : undefined,
       }),
       line('歷史真實資產', d.history, COLORS.history, {
+        // With only a few months recorded the line is too short to see, so mark each point.
+        showSymbol: historyMonths.value <= 6,
+        symbol: 'circle',
+        symbolSize: 8,
         lineStyle: { color: COLORS.history, width: 2.5 },
         areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
           { offset: 0, color: 'rgba(45,212,191,0.25)' },
@@ -139,6 +146,9 @@ watch(() => [props.projection, props.history, props.timeToCoast, range.value], r
       <div>
         <h2 class="text-sm font-semibold">Coast FIRE 雙軌預測</h2>
         <p class="text-xs text-ink-400">全部以今日台幣購買力計算；歷史資產已依通膨換算</p>
+        <p v-if="historyStart && historyMonths <= 2" class="mt-0.5 text-xs text-accent">
+          歷史資產從 {{ historyStart }} 開始記錄，每天收盤後會自動多一個點，線會越來越長
+        </p>
       </div>
       <div class="flex rounded-lg border border-ink-700 p-0.5 text-xs" role="group" aria-label="時間範圍">
         <button
