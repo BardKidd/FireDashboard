@@ -77,7 +77,7 @@ async function save() {
           <input v-model.number="form.monthly_contribution_twd" type="number" min="0" step="any" required class="input num" />
         </label>
         <label class="flex items-center gap-2 self-end pb-2 text-sm text-ink-300">
-          <input v-model="form.contribution_indexed" type="checkbox" class="accent-teal-400" />
+          <input v-model="form.contribution_indexed" type="checkbox" class="accent-[var(--color-accent)]" />
           每年隨通膨調升投入
         </label>
       </fieldset>

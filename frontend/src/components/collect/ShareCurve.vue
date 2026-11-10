@@ -26,16 +26,16 @@ function option(): echarts.EChartsCoreOption {
   if (r.next_milestone) {
     marks.push({ yAxis: r.next_milestone, name: '下一階', label: { formatter: '下一階 ' + r.next_label } })
   }
-  if (r.target_shares) marks.push({ yAxis: r.target_shares, name: '籃子', label: { formatter: '籃子目標' }, lineStyle: { color: '#fbbf24' } })
+  if (r.target_shares) marks.push({ yAxis: r.target_shares, name: '籃子', label: { formatter: '籃子目標' }, lineStyle: { color: '#f2c46d' } })
   const accent = accentColor()
   return {
     animationDuration: 600,
     grid: { left: 8, right: 16, top: 24, bottom: 8, containLabel: true },
     tooltip: {
       trigger: 'axis',
-      backgroundColor: '#111a2e',
-      borderColor: '#24324f',
-      textStyle: { color: '#e6ecf7' },
+      backgroundColor: '#1e1712',
+      borderColor: '#3a2d23',
+      textStyle: { color: '#f2e8dc' },
       formatter: (ps: { seriesName: string; value: [string, number]; data: { ev?: { note: string | null; kind: string } } }[]) => {
         const p = ps[0]
         let s = p.value[0] + '<br/>' + shares(p.value[1], r.market)
@@ -43,12 +43,12 @@ function option(): echarts.EChartsCoreOption {
         return s
       },
     },
-    xAxis: { type: 'time', minInterval: 86400000, axisLine: { lineStyle: { color: '#34456a' } }, axisLabel: { color: '#8393b3' }, splitLine: { show: false } },
+    xAxis: { type: 'time', minInterval: 86400000, axisLine: { lineStyle: { color: '#57473b' } }, axisLabel: { color: '#a8968a' }, splitLine: { show: false } },
     yAxis: {
       type: 'value',
       min: 0,
-      axisLabel: { color: '#8393b3', formatter: (v: number) => (r.market === 'TW' ? v / 1000 + ' 張' : String(v)) },
-      splitLine: { lineStyle: { color: '#24324f' } },
+      axisLabel: { color: '#a8968a', formatter: (v: number) => (r.market === 'TW' ? v / 1000 + ' 張' : String(v)) },
+      splitLine: { lineStyle: { color: '#3a2d23' } },
     },
     series: [
       {
@@ -59,9 +59,9 @@ function option(): echarts.EChartsCoreOption {
         showSymbol: false,
         lineStyle: { color: accent, width: 2 },
         areaStyle: { color: accent, opacity: 0.12 },
-        markLine: { symbol: 'none', silent: true, lineStyle: { type: 'dashed', color: '#8393b3' }, label: { color: '#a9b6cf', position: 'insideEndTop' }, data: marks },
+        markLine: { symbol: 'none', silent: true, lineStyle: { type: 'dashed', color: '#a8968a' }, label: { color: '#cdbcae', position: 'insideEndTop' }, data: marks },
       },
-      { name: '賣出', type: 'scatter', data: sells, symbolSize: 9, itemStyle: { color: '#93c5fd' } },
+      { name: '賣出', type: 'scatter', data: sells, symbolSize: 9, itemStyle: { color: '#9cc3c9' } },
     ],
   }
 }

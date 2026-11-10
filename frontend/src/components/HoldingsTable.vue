@@ -26,10 +26,10 @@ const named = (r: Position) => r.market === 'CASH' || r.market === 'CONTRACT'
       </div>
       <div class="flex flex-wrap items-center gap-3">
         <label class="flex cursor-pointer items-center gap-2 text-xs text-ink-400">
-          <input v-model="showPnl" type="checkbox" class="accent-teal-400" /> 顯示成本與損益
+          <input v-model="showPnl" type="checkbox" class="accent-[var(--color-accent)]" /> 顯示成本與損益
         </label>
         <label v-if="archivedCount" class="flex cursor-pointer items-center gap-2 text-xs text-ink-400">
-          <input v-model="showArchived" type="checkbox" class="accent-teal-400" /> 顯示已封存（{{ archivedCount }}）
+          <input v-model="showArchived" type="checkbox" class="accent-[var(--color-accent)]" /> 顯示已封存（{{ archivedCount }}）
         </label>
         <button class="btn-ghost" @click="emit('addContract')">＋ 約定存款</button>
         <button class="btn-primary" @click="emit('add')">
@@ -39,7 +39,7 @@ const named = (r: Position) => r.market === 'CASH' || r.market === 'CONTRACT'
       </div>
     </div>
 
-    <div class="-mx-5 overflow-x-auto">
+    <div class="relative -mx-5 overflow-x-auto">
       <table class="w-full min-w-[720px] text-sm">
         <thead>
           <tr class="border-b border-ink-700/70 text-left text-xs text-ink-400">
