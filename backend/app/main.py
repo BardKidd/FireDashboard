@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from . import calculator, contracts, database, fetcher, ledger, seed
+from . import calculator, contracts, database, fetcher, game, ledger, seed
 from .database import get_db, write_lock
 from .models import (
     CASH_SYMBOLS,
@@ -25,6 +25,8 @@ from .models import (
     Holding,
     PortfolioSnapshot,
     PriceHistory,
+    Redemption,
+    Reward,
     ShareLog,
     get_config,
 )
@@ -521,6 +523,123 @@ def trigger_refresh():
         return {"started": False, "reason": "already running"}
     refresh_in_background()
     return {"started": True}
+
+
+# ------------------------------------------------------------------ Phase 2: collecting game
+
+class CheckinIn(BaseModel):
+    note: str | None = Field(default=None, max_length=200)
+
+
+class RewardIn(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+    cost: int = Field(gt=0, le=1_000_000)
+    repeatable: bool = True
+    note: str | None = None
+
+
+class GameSettingsIn(BaseModel):
+    theme: str | None = None
+    basket_goal: Literal["coast", "fire"] | None = None
+
+
+def _game_error(db: Session, exc: Exception):
+    db.rollback()
+    return HTTPException(400, str(exc))
+
+
+@app.get("/api/collect")
+def get_collect(db: Session = Depends(get_db)):
+    return game.collect_view(db)
+
+
+@app.get("/api/game")
+def get_game(db: Session = Depends(get_db)):
+    with write_lock:
+        out = game.state(db)
+        db.commit()
+    return out
+
+
+@app.post("/api/game/checkin")
+def post_checkin(body: CheckinIn, db: Session = Depends(get_db)):
+    with write_lock:
+        try:
+            report = game.checkin(db, body.note)
+        except game.GameError as exc:
+            raise _game_error(db, exc) from exc
+        db.commit()
+    return report
+
+
+@app.put("/api/game/settings")
+def put_game_settings(body: GameSettingsIn, db: Session = Depends(get_db)):
+    with write_lock:
+        try:
+            game.set_settings(db, body.theme, body.basket_goal)
+        except game.GameError as exc:
+            raise _game_error(db, exc) from exc
+        db.commit()
+    return {"ok": True}
+
+
+@app.post("/api/game/rewards", status_code=201)
+def create_reward(body: RewardIn, db: Session = Depends(get_db)):
+    with write_lock:
+        r = Reward(**body.model_dump())
+        db.add(r)
+        db.commit()
+        return {"id": r.id}
+
+
+@app.put("/api/game/rewards/{rid}")
+def update_reward(rid: int, body: RewardIn, db: Session = Depends(get_db)):
+    with write_lock:
+        r = db.get(Reward, rid)
+        if r is None or r.archived:
+            raise HTTPException(404, "找不到獎勵")
+        for k, v in body.model_dump().items():
+            setattr(r, k, v)
+        db.commit()
+    return {"ok": True}
+
+
+@app.delete("/api/game/rewards/{rid}")
+def delete_reward(rid: int, db: Session = Depends(get_db)):
+    """Archive if it was ever redeemed, so the redemption history stays."""
+    with write_lock:
+        r = db.get(Reward, rid)
+        if r is None:
+            raise HTTPException(404, "找不到獎勵")
+        if db.scalar(select(Redemption.id).where(Redemption.reward_id == rid).limit(1)):
+            r.archived = True
+        else:
+            db.delete(r)
+        db.commit()
+    return {"ok": True}
+
+
+@app.post("/api/game/rewards/{rid}/redeem", status_code=201)
+def redeem_reward(rid: int, db: Session = Depends(get_db)):
+    with write_lock:
+        try:
+            red = game.redeem(db, rid)
+        except game.GameError as exc:
+            raise _game_error(db, exc) from exc
+        db.commit()
+        return {"id": red.id, "name": red.name, "cost": red.cost, "date": red.date}
+
+
+@app.delete("/api/game/redemptions/{red_id}")
+def undo_redemption(red_id: int, db: Session = Depends(get_db)):
+    """Undo a mistaken redemption and refund the stars."""
+    with write_lock:
+        red = db.get(Redemption, red_id)
+        if red is None:
+            raise HTTPException(404, "找不到兌換紀錄")
+        db.delete(red)
+        db.commit()
+    return {"ok": True}
 
 
 @app.get("/api/health")

@@ -165,6 +165,66 @@ class FixedContract(Base):
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
+class Checkin(Base):
+    """Phase 2: one row per Taiwan date the user checked in."""
+
+    __tablename__ = "checkins"
+
+    date: Mapped[str] = mapped_column(String(10), primary_key=True)
+    points: Mapped[int] = mapped_column(Integer, default=10)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+
+
+class Achievement(Base):
+    """Phase 2: unlocked badges and point events. Rows are only ever added,
+    never revoked, so a later correction can't take a reward away."""
+
+    __tablename__ = "achievements"
+
+    key: Mapped[str] = mapped_column(String(80), primary_key=True)
+    category: Mapped[str] = mapped_column(String(12))  # milestone|coast|checkin|streak|dividend|first
+    title: Mapped[str] = mapped_column(String(100))
+    detail: Mapped[str | None] = mapped_column(Text, nullable=True)
+    symbol: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    earned_on: Mapped[str] = mapped_column(String(10))
+    points: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+
+
+class Reward(Base):
+    """Phase 2: a real-life reward the user sets a star price for."""
+
+    __tablename__ = "rewards"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(100))
+    cost: Mapped[int] = mapped_column(Integer)
+    repeatable: Mapped[bool] = mapped_column(Boolean, default=True)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    archived: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+
+
+class Redemption(Base):
+    __tablename__ = "redemptions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    reward_id: Mapped[int] = mapped_column(Integer, index=True)
+    name: Mapped[str] = mapped_column(String(100))
+    cost: Mapped[int] = mapped_column(Integer)
+    date: Mapped[str] = mapped_column(String(10))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+
+
+class GameSettings(Base):
+    __tablename__ = "game_settings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
+    theme: Mapped[str] = mapped_column(String(20), default="teal")
+    basket_goal: Mapped[str] = mapped_column(String(10), default="coast")  # coast|fire
+
+
 class FetchStatus(Base):
     __tablename__ = "fetch_status"
 
@@ -177,6 +237,8 @@ class FetchStatus(Base):
 def ensure_defaults(db: Session) -> None:
     if db.get(FireConfig, 1) is None:
         db.add(FireConfig(id=1))
+    if db.get(GameSettings, 1) is None:
+        db.add(GameSettings(id=1))
     for sym, cur in CASH_SYMBOLS.items():
         if db.get(Holding, sym) is None:
             db.add(

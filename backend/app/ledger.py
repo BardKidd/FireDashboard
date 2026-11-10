@@ -159,6 +159,10 @@ def ensure_split_logs(db: Session, symbol: str) -> None:
         )
     ):
         if act.date not in existing and act.value and act.value != 1:
+            # Phase 2: a manual share target is in pre-split units; scale it once.
+            holding = db.get(Holding, symbol)
+            if holding is not None and holding.target_shares:
+                holding.target_shares *= act.value
             db.add(
                 ShareLog(
                     date=act.date,
