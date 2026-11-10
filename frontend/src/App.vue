@@ -22,6 +22,27 @@ import ShareLogDialog from './components/ShareLogDialog.vue'
 import StressCard from './components/StressCard.vue'
 import SummaryCards from './components/SummaryCards.vue'
 import TrajectoryChart from './components/TrajectoryChart.vue'
+import CollectView from './components/collect/CollectView.vue'
+import { applyTheme } from './theme'
+
+type View = 'dashboard' | 'collect'
+function savedView(): View {
+  try {
+    return localStorage.getItem('fire.view') === 'collect' ? 'collect' : 'dashboard'
+  } catch {
+    return 'dashboard'
+  }
+}
+const view = ref<View>(savedView())
+function setView(v: View) {
+  view.value = v
+  try {
+    localStorage.setItem('fire.view', v)
+  } catch {
+    /* private mode */
+  }
+}
+const collectView = ref<InstanceType<typeof CollectView>>()
 
 const summary = ref<Summary>()
 const holdings = ref<Holdings>()
@@ -73,7 +94,10 @@ async function poll() {
   try {
     const was = status.value?.refreshing
     status.value = await api.status()
-    if (was && !status.value.refreshing) await loadAll()
+    if (was && !status.value.refreshing) {
+      await loadAll()
+      collectView.value?.load()
+    }
   } catch {
     /* backend restarting */
   }
@@ -94,6 +118,7 @@ function afterAdd() {
 }
 
 onMounted(async () => {
+  api.game().then((g) => applyTheme(g.themes, g.settings.theme)).catch(() => {})
   await loadAll()
   poll()
 })
@@ -130,7 +155,20 @@ const errorDetail = computed(() =>
           </p>
         </div>
       </div>
-      <div class="flex gap-2">
+      <div class="flex flex-wrap gap-2">
+        <div class="flex rounded-lg border border-ink-700 p-0.5 text-sm" role="tablist" aria-label="檢視模式">
+          <button
+            v-for="v in (['dashboard', 'collect'] as const)"
+            :key="v"
+            role="tab"
+            :aria-selected="view === v"
+            class="rounded-md px-3 py-1 font-medium transition"
+            :class="view === v ? 'bg-accent text-ink-950' : 'text-ink-300 hover:text-ink-100'"
+            @click="setView(v)"
+          >
+            {{ v === 'dashboard' ? '儀表板' : '收集冊' }}
+          </button>
+        </div>
         <button class="btn-ghost" :disabled="status?.refreshing" @click="refreshNow">
           <svg viewBox="0 0 20 20" class="h-4 w-4" :class="status?.refreshing ? 'animate-spin' : ''" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 10a6 6 0 1 1-1.8-4.3M16 3v4h-4" /></svg>
           更新報價
@@ -152,7 +190,8 @@ const errorDetail = computed(() =>
       {{ summary.missing_prices.join('、') }} 還沒有報價，總資產暫時不含這些標的。
     </p>
 
-    <div v-if="summary && holdings && projection" class="grid gap-4">
+    <CollectView v-if="view === 'collect'" ref="collectView" />
+    <div v-else-if="summary && holdings && projection" class="grid gap-4">
       <SummaryCards :summary="summary" />
       <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
         <TrajectoryChart :projection="projection" :history="history" :time-to-coast="summary.time_to_coast" />
@@ -161,7 +200,7 @@ const errorDetail = computed(() =>
       <HoldingsTable :holdings="holdings" @add="showAdd = true" @add-contract="contractFor = 'new'" @record="recordFor = $event" @edit="onEdit" />
       <DividendsCard :dividends="dividends" />
     </div>
-    <div v-else-if="!loadError" class="grid gap-4" aria-busy="true">
+    <div v-else-if="!loadError && view === 'dashboard'" class="grid gap-4" aria-busy="true">
       <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <div v-for="i in 4" :key="i" class="card h-32 animate-pulse" />
       </div>
