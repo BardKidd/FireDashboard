@@ -26,3 +26,24 @@ export function hideSplash() {
   el.classList.add('out')
   window.setTimeout(() => el.remove(), 500)
 }
+
+/**
+ * iOS home-screen apps (black-translucent status bar) sometimes report a layout
+ * viewport shorter than the screen, so `bottom: 0` floats above the real bottom
+ * edge with an empty strip underneath. Measure the shortfall and expose it as
+ * --ios-gap so fixed bottom UI can sit on the true edge. 0 everywhere else.
+ */
+export function trackStandaloneGap() {
+  const nav = navigator as Navigator & { standalone?: boolean }
+  const standalone = nav.standalone === true || window.matchMedia('(display-mode: standalone)').matches
+  if (!standalone) return
+  const update = () => {
+    const portrait = window.matchMedia('(orientation: portrait)').matches
+    const full = portrait ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height)
+    const gap = full - window.innerHeight
+    document.documentElement.style.setProperty('--ios-gap', gap > 0 && gap < 120 ? `${gap}px` : '0px')
+  }
+  update()
+  window.addEventListener('resize', update)
+  window.addEventListener('orientationchange', () => window.setTimeout(update, 300))
+}
