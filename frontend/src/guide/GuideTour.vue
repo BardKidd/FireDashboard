@@ -152,7 +152,19 @@ const cardStyle = computed(() => {
           <button v-if="i > 0" class="btn-ghost" @click="prev">上一步</button>
           <button class="btn-primary" @click="next">{{ last ? '開始使用' : '下一步' }}</button>
         </div>
-        <div class="mt-3 flex justify-center gap-1" aria-hidden="true">
+        <!-- Keyboard hint; phones have no arrow keys, so it shows from sm up. -->
+        <div class="mt-4 hidden items-center justify-center gap-3 text-[11px] text-ink-400 sm:flex" aria-label="鍵盤：左右方向鍵切換，Esc 離開">
+          <span class="flex items-center gap-1">
+            <kbd class="key" title="上一步"><svg viewBox="0 0 16 16" class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 8H3M7 4L3 8l4 4" /></svg></kbd>
+            <kbd class="key" title="下一步"><svg viewBox="0 0 16 16" class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" /></svg></kbd>
+            <span aria-hidden="true">切換</span>
+          </span>
+          <span class="flex items-center gap-1">
+            <kbd class="key px-1.5" title="離開導覽">Esc</kbd>
+            <span aria-hidden="true">離開</span>
+          </span>
+        </div>
+        <div class="mt-3 flex justify-center gap-1 sm:mt-2.5" aria-hidden="true">
           <span
             v-for="(_, k) in steps"
             :key="k"
@@ -172,6 +184,20 @@ const cardStyle = computed(() => {
     0 0 24px 4px rgba(245, 158, 75, 0.35),
     0 0 0 200vmax rgba(10, 7, 5, 0.72);
   transition: left 0.25s ease, top 0.25s ease, width 0.25s ease, height 0.25s ease;
+}
+.key {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.375rem;
+  height: 1.375rem;
+  border: 1px solid var(--color-ink-700);
+  border-bottom-width: 2px;
+  border-radius: 0.375rem;
+  background: var(--color-ink-950);
+  color: var(--color-ink-300);
+  font-family: var(--font-sans);
+  font-size: 10px;
+  line-height: 1;
 }
 .tour-card {
   transition: left 0.25s ease, top 0.25s ease;
