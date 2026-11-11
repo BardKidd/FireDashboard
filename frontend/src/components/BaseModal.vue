@@ -21,7 +21,7 @@ onBeforeUnmount(() => {
 <template>
   <!-- Phones: a sheet that slides up from the bottom, within thumb reach. Larger screens: a centered dialog. -->
   <div
-    class="base-modal fixed inset-0 bottom-[calc(-1*var(--ios-gap,0px))] z-40 flex items-end justify-center overflow-y-auto bg-black/60 md:items-center md:p-4"
+    class="base-modal fixed inset-0 z-40 flex items-end justify-center overflow-y-auto bg-black/60 md:items-center md:p-4"
     @mousedown.self="emit('close')"
   >
     <div
