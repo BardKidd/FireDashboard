@@ -3,8 +3,11 @@ import { computed } from 'vue'
 import type { Holdings, Position, Summary } from '../api'
 import { money, pct, wan, ym } from '../format'
 import InfoTip from '../guide/InfoTip.vue'
+import { isMobile } from '../mobile'
 
 const props = defineProps<{ summary: Summary; holdings: Holdings }>()
+/** A log was tapped: its holding's symbol, or null for a grouped log. */
+const emit = defineEmits<{ pick: [symbol: string | null] }>()
 
 // ---- Numbers (same as the old summary cards) ----
 const progress = computed(() => props.summary.progress ?? 0)
@@ -32,7 +35,7 @@ const headline = computed(() => {
 })
 
 // ---- Logs: each log is a holding (or a group of small ones), thickness by weight ----
-interface Log { label: string; weight: number }
+interface Log { label: string; weight: number; symbol: string | null }
 
 function category(p: Position): string {
   if (p.market === 'CONTRACT') return '約定存款'
@@ -47,6 +50,7 @@ const logs = computed<Log[]>(() => {
   const out: Log[] = live.filter((r) => r.weight >= 0.05).map((r) => ({
     label: r.market === 'CONTRACT' || r.market === 'CASH' ? category(r) : r.symbol,
     weight: r.weight,
+    symbol: r.symbol,
   }))
   const groups = new Map<string, { w: number; n: number }>()
   for (const r of live.filter((r) => r.weight < 0.05)) {
@@ -55,11 +59,11 @@ const logs = computed<Log[]>(() => {
     g.n += 1
     groups.set(category(r), g)
   }
-  for (const [k, g] of groups) out.push({ label: g.n > 1 && k !== '約定存款' ? `${k} ${g.n} 檔` : k, weight: g.w })
+  for (const [k, g] of groups) out.push({ label: g.n > 1 && k !== '約定存款' ? `${k} ${g.n} 檔` : k, weight: g.w, symbol: null })
   out.sort((a, b) => b.weight - a.weight)
   if (out.length > 8) {
     const rest = out.splice(7)
-    out.push({ label: `其他 ${rest.length} 組`, weight: rest.reduce((s, l) => s + l.weight, 0) })
+    out.push({ label: `其他 ${rest.length} 組`, weight: rest.reduce((s, l) => s + l.weight, 0), symbol: null })
   }
   return out
 })
@@ -85,6 +89,8 @@ const logShapes = computed(() =>
     const [lx, ly] = P(152 + thick, a, -6)
     return {
       key: l.label,
+      symbol: l.symbol,
+      hit: `M${x0 + nx * 2.6} ${y0 + ny * 2.6} L${x1 + nx * 2.6} ${y1 + ny * 2.6} L${x1 - nx * 2.6} ${y1 - ny * 2.6} L${x0 - nx * 2.6} ${y0 - ny * 2.6} Z`,
       back: Math.sin(a) < 0,
       body: `M${x0 + nx} ${y0 + ny} L${x1 + nx} ${y1 + ny} L${x1 - nx} ${y1 - ny} L${x0 - nx} ${y0 - ny} Z`,
       grain: `M${x0 + nx * 0.5} ${y0 + ny * 0.5} L${x1 + nx * 0.5} ${y1 + ny * 0.5}`,
@@ -135,7 +141,7 @@ const sparks = computed(() =>
 <template>
   <section class="hero grid grid-cols-[minmax(0,1fr)] items-center gap-x-8 gap-y-2 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]" aria-label="核心指標">
     <svg
-      viewBox="0 0 800 400"
+      :viewBox="isMobile ? '10 50 780 340' : '0 0 800 400'"
       class="w-full"
       data-tour="campfire"
       role="img"
@@ -166,7 +172,18 @@ const sparks = computed(() =>
         <ellipse :cx="s.x" :cy="s.y" :rx="s.w * 0.9" :ry="s.w * 0.48" fill="#6d6058" />
         <ellipse :cx="s.x - 3" :cy="s.y - 2" :rx="s.w * 0.45" :ry="s.w * 0.2" fill="#8f8178" opacity=".7" />
       </g>
-      <g v-for="l in logShapes.filter((l) => l.back)" :key="'lb' + l.key">
+      <g
+        v-for="l in logShapes.filter((l) => l.back)"
+        :key="'lb' + l.key"
+        class="log"
+        role="button"
+        tabindex="0"
+        :aria-label="l.symbol ? '記錄 ' + l.text : l.text + '，看持股列表'"
+        @click="emit('pick', l.symbol)"
+        @keydown.enter.prevent="emit('pick', l.symbol)"
+        @keydown.space.prevent="emit('pick', l.symbol)"
+      >
+        <path :d="l.hit" fill="transparent" />
         <path :d="l.body" fill="#5a3b26" />
         <path :d="l.grain" stroke="#7a5236" :stroke-width="l.thick * 0.18" fill="none" />
         <path :d="l.char" stroke="#1b110c" :stroke-width="l.thick * 0.9" stroke-opacity=".55" stroke-linecap="round" fill="none" />
@@ -183,8 +200,8 @@ const sparks = computed(() =>
         stroke-opacity=".5"
         stroke-dasharray="4 6"
       />
-      <text :x="CX + 40" :y="TARGET_TOP + 8" class="display" font-size="15" fill="#ffd36e">Coast 線 · {{ wan(summary.coast_target) }}</text>
-      <text :x="CX - 40" :y="TARGET_TOP + 8" class="display" font-size="15" fill="#f2e8dc" text-anchor="end">現在 · {{ wan(summary.total_assets) }}</text>
+      <text :x="CX + 40" :y="TARGET_TOP + 8" class="display" :font-size="isMobile ? 23 : 15" fill="#ffd36e">Coast 線 · {{ wan(summary.coast_target) }}</text>
+      <text :x="CX - 40" :y="TARGET_TOP + 8" class="display" :font-size="isMobile ? 23 : 15" fill="#f2e8dc" text-anchor="end">現在 · {{ wan(summary.total_assets) }}</text>
 
       <g v-if="progress > 0" :transform="`translate(${CX} ${BASE_Y}) scale(${flameScale})`">
         <g :class="{ windy }">
@@ -197,7 +214,18 @@ const sparks = computed(() =>
       </g>
       <circle v-for="(s, i) in progress > 0 ? sparks : []" :key="'sp' + i" class="spark" :cx="s.x" :cy="s.y" :r="s.r" :fill="s.fill" :style="s.style" />
 
-      <g v-for="l in logShapes.filter((l) => !l.back)" :key="'lf' + l.key">
+      <g
+        v-for="l in logShapes.filter((l) => !l.back)"
+        :key="'lf' + l.key"
+        class="log"
+        role="button"
+        tabindex="0"
+        :aria-label="l.symbol ? '記錄 ' + l.text : l.text + '，看持股列表'"
+        @click="emit('pick', l.symbol)"
+        @keydown.enter.prevent="emit('pick', l.symbol)"
+        @keydown.space.prevent="emit('pick', l.symbol)"
+      >
+        <path :d="l.hit" fill="transparent" />
         <path :d="l.body" fill="#5a3b26" />
         <path :d="l.grain" stroke="#7a5236" :stroke-width="l.thick * 0.18" fill="none" />
         <path :d="l.char" stroke="#1b110c" :stroke-width="l.thick * 0.9" stroke-opacity=".55" stroke-linecap="round" fill="none" />
@@ -215,13 +243,15 @@ const sparks = computed(() =>
         :x="l.lx"
         :y="l.ly"
         :text-anchor="l.anchor"
-        class="display"
-        font-size="14"
+        class="display log-label"
+        :font-size="isMobile ? 24 : 14"
         fill="#f2e8dc"
+        @click="emit('pick', l.symbol)"
       >{{ l.text }}</text>
       <path class="leaf-fall" :d="LEAF" transform="translate(690 120)" fill="#d9822b" />
     </svg>
 
+    <p class="-mt-1 text-center text-xs text-ink-400 md:hidden">點一根柴，就能記錄那檔的買賣</p>
     <div class="grid min-w-0 gap-5">
       <p class="display text-lg sm:text-xl leading-relaxed text-ink-100 text-balance">{{ headline }}</p>
       <p v-if="windy" class="-mt-3 text-sm text-ink-400">今天有點風，火晃得比較大，柴都還在。</p>
@@ -267,6 +297,11 @@ const sparks = computed(() =>
 </template>
 
 <style scoped>
+.log { cursor: pointer; outline: none; }
+.log path:nth-child(2) { transition: fill 0.15s; }
+.log:hover path:nth-child(2), .log:focus-visible path:nth-child(2) { fill: #7a5236; }
+.log:focus-visible ellipse:first-of-type { stroke: var(--color-accent); stroke-width: 2; }
+.log-label { cursor: pointer; }
 .tongue {
   transform-box: fill-box;
   transform-origin: 50% 100%;

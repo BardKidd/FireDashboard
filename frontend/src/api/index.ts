@@ -1,3 +1,5 @@
+import { noteResponse } from '../pwa'
+
 export type FxMode = 'live' | 'ma200' | 'custom'
 export type AssetType = 'equity' | 'leveraged' | 'bond' | 'cash' | 'contract'
 export type LogKind = 'buy' | 'sell' | 'adjust' | 'deposit' | 'withdraw'
@@ -313,10 +315,16 @@ export interface CheckinReport {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch('/api' + path, {
-    headers: { 'Content-Type': 'application/json' },
-    ...init,
-  })
+  let res: Response
+  try {
+    res = await fetch('/api' + path, {
+      headers: { 'Content-Type': 'application/json' },
+      ...init,
+    })
+  } catch {
+    throw new Error(navigator.onLine ? '連不到伺服器，稍後再試一次' : '目前沒有網路，連上後再試一次')
+  }
+  noteResponse(res)
   if (!res.ok) {
     let msg = res.status + ' ' + res.statusText
     try {
