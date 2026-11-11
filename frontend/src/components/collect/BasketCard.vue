@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import type { BasketGoal, Collect } from '../../api'
 import { pct, wan } from '../../format'
+import InfoTip from '../../guide/InfoTip.vue'
 
 const props = defineProps<{ collect: Collect }>()
 const emit = defineEmits<{ goal: [g: BasketGoal] }>()
@@ -16,7 +17,7 @@ const dash = computed(() => C * Math.min(1, p.value))
   <article class="card flex flex-col gap-4">
     <div class="flex flex-wrap items-start justify-between gap-2">
       <div>
-        <h2 class="text-sm font-semibold">目標股數籃子</h2>
+        <h2 class="text-sm font-semibold">目標股數籃子<InfoTip k="basket" /></h2>
         <p class="text-xs text-ink-400">把目標金額依目前配置，以 200 日均價折算成各標的要收集的股數</p>
       </div>
       <div class="flex rounded-lg border border-ink-700 p-0.5 text-xs" role="group" aria-label="籃子目標">

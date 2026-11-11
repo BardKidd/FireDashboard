@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
   api,
   type Config,
@@ -25,6 +25,8 @@ import SoundToggle from './components/SoundToggle.vue'
 import TrajectoryChart from './components/TrajectoryChart.vue'
 import CollectView from './components/collect/CollectView.vue'
 import { applyTheme } from './theme'
+import GuideTour from './guide/GuideTour.vue'
+import { collectTour, dashboardTour, type TourName } from './guide/content'
 
 type View = 'dashboard' | 'collect'
 function savedView(): View {
@@ -132,6 +134,42 @@ const updatedLabel = computed(() => {
   if (!st.last_success_date) return '尚未取得報價'
   return '報價更新至 ' + st.last_success_date
 })
+// ---- Guided tour: shown once per view on first visit, replayable from the header.
+const tour = ref<TourName | null>(null)
+const tourSteps = computed(() =>
+  tour.value === 'collect' ? collectTour() : dashboardTour(summary.value, config.value),
+)
+const seenKey = (t: TourName) => 'fire.tour.' + t
+function seen(t: TourName): boolean {
+  try {
+    return localStorage.getItem(seenKey(t)) === 'done'
+  } catch {
+    return true // no storage: never nag on every visit
+  }
+}
+function startTour() {
+  tour.value = view.value
+}
+function closeTour() {
+  if (tour.value) {
+    try {
+      localStorage.setItem(seenKey(tour.value), 'done')
+    } catch {
+      /* private mode */
+    }
+  }
+  tour.value = null
+}
+watch(
+  () => [view.value, !!summary.value] as const,
+  ([v, loaded]) => {
+    if (tour.value || seen(v)) return
+    if (v === 'dashboard' && !loaded) return
+    tour.value = v
+  },
+  { immediate: true },
+)
+
 const hasErrors = computed(() => (status.value?.errors.length ?? 0) > 0)
 const errorDetail = computed(() =>
   (status.value?.symbols ?? [])
@@ -158,7 +196,7 @@ const errorDetail = computed(() =>
         </div>
       </div>
       <div class="flex flex-wrap gap-2">
-        <div class="flex rounded-lg border border-ink-700 p-0.5 text-sm" role="tablist" aria-label="檢視模式">
+        <div class="flex rounded-lg border border-ink-700 p-0.5 text-sm" role="tablist" aria-label="檢視模式" data-tour="view-switch">
           <button
             v-for="v in (['dashboard', 'collect'] as const)"
             :key="v"
@@ -171,12 +209,16 @@ const errorDetail = computed(() =>
             {{ v === 'dashboard' ? '儀表板' : '收集冊' }}
           </button>
         </div>
+        <button class="btn-ghost" data-tour="help" title="操作導覽" @click="startTour">
+          <svg viewBox="0 0 20 20" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="10" cy="10" r="7.5" /><path d="M7.8 7.8a2.3 2.3 0 0 1 4.4.9c0 1.5-2.2 1.9-2.2 3.3M10 14.4v.1" stroke-linecap="round" /></svg>
+          導覽
+        </button>
         <SoundToggle />
-        <button class="btn-ghost" :disabled="status?.refreshing" @click="refreshNow">
+        <button class="btn-ghost" data-tour="refresh" :disabled="status?.refreshing" @click="refreshNow">
           <svg viewBox="0 0 20 20" class="h-4 w-4" :class="status?.refreshing ? 'animate-spin' : ''" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 10a6 6 0 1 1-1.8-4.3M16 3v4h-4" /></svg>
           更新報價
         </button>
-        <button class="btn-ghost" :disabled="!config" @click="showConfig = true">
+        <button class="btn-ghost" data-tour="config" :disabled="!config" @click="showConfig = true">
           <svg viewBox="0 0 20 20" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h8M16 6h0M4 14h2M10 14h6" /><circle cx="14" cy="6" r="2" /><circle cx="8" cy="14" r="2" /></svg>
           參數設定
         </button>
@@ -197,11 +239,11 @@ const errorDetail = computed(() =>
     <div v-else-if="summary && holdings && projection" class="grid grid-cols-[minmax(0,1fr)] gap-4">
       <CampfireHero :summary="summary" :holdings="holdings" />
       <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
-        <TrajectoryChart :projection="projection" :history="history" :time-to-coast="summary.time_to_coast" />
-        <StressCard :summary="summary" />
+        <TrajectoryChart data-tour="trajectory" :projection="projection" :history="history" :time-to-coast="summary.time_to_coast" />
+        <StressCard data-tour="stress" :summary="summary" />
       </div>
-      <HoldingsTable :holdings="holdings" @add="showAdd = true" @add-contract="contractFor = 'new'" @record="recordFor = $event" @edit="onEdit" />
-      <DividendsCard :dividends="dividends" />
+      <HoldingsTable data-tour="holdings" :holdings="holdings" @add="showAdd = true" @add-contract="contractFor = 'new'" @record="recordFor = $event" @edit="onEdit" />
+      <DividendsCard data-tour="dividends" :dividends="dividends" />
     </div>
     <div v-else-if="!loadError && view === 'dashboard'" class="grid gap-4" aria-busy="true">
       <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -224,5 +266,6 @@ const errorDetail = computed(() =>
       @changed="loadAll"
     />
     <HoldingEditDialog v-if="editFor" :position="editFor" @close="editFor = null" @changed="loadAll" />
+    <GuideTour v-if="tour" :key="tour" :steps="tourSteps" @close="closeTour" />
   </div>
 </template>

@@ -50,15 +50,15 @@ onMounted(load)
     <p v-if="err" class="mb-4 rounded-xl border border-amber-800/60 bg-amber-950/40 px-4 py-3 text-sm text-warm" role="alert">{{ err }}</p>
     <div v-if="game && collect" class="grid gap-4">
       <div class="grid gap-4 lg:grid-cols-3">
-        <PlayerCard :game="game" />
-        <CheckinCard :game="game" @checked="onChecked" />
-        <BasketCard :collect="collect" @goal="setGoal" />
+        <PlayerCard :game="game" data-tour="player" />
+        <CheckinCard :game="game" data-tour="checkin" @checked="onChecked" />
+        <BasketCard :collect="collect" data-tour="basket" @goal="setGoal" />
       </div>
       <CollectionGrid :rows="collect.holdings" :selected="selected" @select="selected = $event" @changed="load" />
       <ShareCurve v-if="selectedRow && selectedRow.curve.length" :row="selectedRow" :today="collect.today" />
       <div class="grid gap-4 lg:grid-cols-2">
-        <BadgeWall :game="game" />
-        <RewardShop :game="game" @changed="load" />
+        <BadgeWall :game="game" data-tour="badges" />
+        <RewardShop :game="game" data-tour="rewards" @changed="load" />
       </div>
     </div>
     <div v-else-if="!err" class="grid gap-4 lg:grid-cols-3" aria-busy="true">
