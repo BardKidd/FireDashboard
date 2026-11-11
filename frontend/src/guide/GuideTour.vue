@@ -3,7 +3,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import type { TourStep } from './content'
 
 const props = defineProps<{ steps: TourStep[] }>()
-const emit = defineEmits<{ close: [] }>()
+const emit = defineEmits<{ close: []; step: [s: TourStep] }>()
 
 const i = ref(0)
 const rect = ref<DOMRect | null>(null)
@@ -22,9 +22,10 @@ let target: HTMLElement | null = null
 let raf = 0
 let token = 0
 
+// The same target can exist twice (desktop header and phone tab bar); use the visible one.
 function find(name: string): HTMLElement | null {
-  const el = document.querySelector<HTMLElement>(`[data-tour="${name}"]`)
-  return el && el.getClientRects().length ? el : null
+  const all = document.querySelectorAll<HTMLElement>(`[data-tour="${name}"]`)
+  return Array.from(all).find((el) => el.getClientRects().length > 0) ?? null
 }
 
 // Targets can appear late (data still loading), so wait a little before skipping one.
@@ -41,6 +42,7 @@ async function show(n: number, dir: 1 | -1 = 1) {
   const my = ++token
   i.value = n
   const s = props.steps[n]
+  emit('step', s)
   if (!s.target) {
     target = null
     rect.value = null
