@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { api, type CheckinReport, type Game } from '../../api'
+import InfoTip from '../../guide/InfoTip.vue'
 
 const props = defineProps<{ game: Game }>()
 const emit = defineEmits<{ checked: [r: CheckinReport] }>()
@@ -60,7 +61,7 @@ async function go() {
           <p class="num text-lg font-semibold">{{ game.checkin.total_days }} <span class="text-xs font-normal text-ink-400">天</span></p>
         </div>
         <div>
-          <p class="label">連續</p>
+          <p class="label">連續<InfoTip k="streak" /></p>
           <p class="num text-lg font-semibold">{{ game.checkin.week_streak }} <span class="text-xs font-normal text-ink-400">週</span></p>
         </div>
       </div>

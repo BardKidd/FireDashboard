@@ -38,7 +38,7 @@ const onSale = (r: CollectRow) => (r.radar?.extra_vs_ma60 ?? 0) > 0.005
 </script>
 
 <template>
-  <section aria-label="收集冊">
+  <section aria-label="收集冊" data-tour="collection">
     <div class="mb-3 flex items-end justify-between">
       <div>
         <h2 class="text-sm font-semibold">收集冊</h2>
