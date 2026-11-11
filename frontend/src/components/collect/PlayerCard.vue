@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import type { Game } from '../../api'
 import StarIcon from './StarIcon.vue'
+import InfoTip from '../../guide/InfoTip.vue'
 
 const props = defineProps<{ game: Game }>()
 const lv = computed(() => props.game.level)
@@ -36,7 +37,7 @@ const bar = computed(() => Math.min(100, (into.value / span.value) * 100) + '%')
     </div>
     <div class="flex items-end justify-between rounded-xl bg-ink-950/60 px-4 py-3">
       <div>
-        <p class="label">可用星星</p>
+        <p class="label">可用星星<InfoTip k="stars" /></p>
         <p class="num flex items-center gap-1.5 text-2xl font-semibold text-warm">
           <StarIcon class="h-5 w-5" />{{ game.stars.balance.toLocaleString() }}
         </p>

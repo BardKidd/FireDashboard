@@ -6,6 +6,7 @@ import { GridComponent, LegendComponent, MarkLineComponent, MarkPointComponent, 
 import { CanvasRenderer } from 'echarts/renderers'
 import type { HistoryPoint, Projection, TimeToCoast } from '../api'
 import { wan, ym } from '../format'
+import InfoTip from '../guide/InfoTip.vue'
 
 echarts.use([LineChart, GridComponent, LegendComponent, TooltipComponent, MarkLineComponent, MarkPointComponent, CanvasRenderer])
 
@@ -144,7 +145,7 @@ watch(() => [props.projection, props.history, props.timeToCoast, range.value], r
   <section class="card">
     <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
       <div>
-        <h2 class="text-sm font-semibold">Coast FIRE 雙軌預測</h2>
+        <h2 class="text-sm font-semibold">Coast FIRE 雙軌預測<InfoTip k="trajectory" /></h2>
         <p class="text-xs text-ink-400">全部以今日台幣購買力計算；歷史資產已依通膨換算</p>
         <p v-if="historyStart && historyMonths <= 2" class="mt-0.5 text-xs text-accent">
           歷史資產從 {{ historyStart }} 開始記錄，每天收盤後會自動多一個點，線會越來越長

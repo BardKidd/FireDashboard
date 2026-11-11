@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import type { Holdings, Position, Summary } from '../api'
 import { money, pct, wan, ym } from '../format'
+import InfoTip from '../guide/InfoTip.vue'
 
 const props = defineProps<{ summary: Summary; holdings: Holdings }>()
 
@@ -136,6 +137,7 @@ const sparks = computed(() =>
     <svg
       viewBox="0 0 800 400"
       class="w-full"
+      data-tour="campfire"
       role="img"
       :aria-label="`營火：每根柴是一組持股，火勢是 Coast FIRE 達成率 ${pct(summary.progress)}`"
     >
@@ -224,8 +226,8 @@ const sparks = computed(() =>
       <p class="display text-lg sm:text-xl leading-relaxed text-ink-100 text-balance">{{ headline }}</p>
       <p v-if="windy" class="-mt-3 text-sm text-ink-400">今天有點風，火晃得比較大，柴都還在。</p>
       <dl class="grid grid-cols-2 gap-x-6 gap-y-4">
-        <div>
-          <dt class="label">柴堆（總資產）</dt>
+        <div data-tour="assets">
+          <dt class="label">柴堆（總資產）<InfoTip k="assets" /></dt>
           <dd class="display num mt-1 text-2xl sm:text-3xl text-warm">{{ wan(summary.total_assets) }}</dd>
           <dd class="mt-1 text-xs text-ink-400">
             {{ fxLabel }}
@@ -234,13 +236,13 @@ const sparks = computed(() =>
             </span>
           </dd>
         </div>
-        <div>
-          <dt class="label">火勢（Coast 達成率）</dt>
+        <div data-tour="progress">
+          <dt class="label">火勢（Coast 達成率）<InfoTip k="progress" /></dt>
           <dd class="display num mt-1 text-2xl sm:text-3xl" :class="progress >= 1 ? 'text-accent' : 'text-warm'">{{ pct(summary.progress) }}</dd>
           <dd class="mt-1 text-xs text-ink-400">Coast 線 {{ wan(summary.coast_target) }}・終點 {{ wan(summary.fire_target) }}</dd>
         </div>
-        <div>
-          <dt class="label">不用再添柴</dt>
+        <div data-tour="coast-date">
+          <dt class="label">不用再添柴<InfoTip k="coastDate" /></dt>
           <template v-if="ttc.status === 'achieved'">
             <dd class="display mt-1 text-2xl sm:text-3xl text-accent">已達成</dd>
             <dd class="mt-1 text-xs text-ink-400">不再投入，也能在 {{ retireAge }} 歲達標</dd>
@@ -254,8 +256,8 @@ const sparks = computed(() =>
             <dd class="mt-1 text-xs text-ink-400">退休時差額 {{ wan(ttc.gap_at_retirement) }}</dd>
           </template>
         </div>
-        <div>
-          <dt class="label">現在停手，退休後每月可領</dt>
+        <div data-tour="income">
+          <dt class="label">現在停手，退休後每月可領<InfoTip k="income" /></dt>
           <dd class="display num mt-1 text-2xl sm:text-3xl text-warm">{{ money(summary.monthly_income_if_stop) }}</dd>
           <dd class="mt-1 text-xs text-ink-400">以今日購買力計，從 {{ retireAge }} 歲開始</dd>
         </div>
