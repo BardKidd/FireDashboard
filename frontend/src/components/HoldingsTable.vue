@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import type { Holdings, Position } from '../api'
 import { money, pct, price, shares, wan } from '../format'
+import InfoTip from '../guide/InfoTip.vue'
 
 const props = defineProps<{ holdings: Holdings }>()
 const emit = defineEmits<{ record: [p: Position]; edit: [p: Position]; add: []; addContract: [] }>()
@@ -47,7 +48,7 @@ const named = (r: Position) => r.market === 'CASH' || r.market === 'CONTRACT'
             <th class="px-3 py-2 text-right font-medium">持有</th>
             <th class="px-3 py-2 text-right font-medium">價格</th>
             <th class="px-3 py-2 text-right font-medium">市值（台幣）</th>
-            <th class="px-3 py-2 text-right font-medium">占比</th>
+            <th class="px-3 py-2 text-right font-medium">占比<InfoTip k="weight" /></th>
             <th v-if="showPnl" class="px-3 py-2 text-right font-medium">均價／未實現</th>
             <th class="px-5 py-2 text-right font-medium"><span class="sr-only">操作</span></th>
           </tr>

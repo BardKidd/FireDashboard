@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import type { Summary } from '../api'
 import { pct, wan } from '../format'
+import InfoTip from '../guide/InfoTip.vue'
 
 const props = defineProps<{ summary: Summary }>()
 const s = computed(() => props.summary.stress)
@@ -13,11 +14,11 @@ const fxGap = computed(() => (fx.value.live && fx.value.ma200 ? fx.value.live / 
   <section class="card flex flex-col gap-5">
     <div>
       <h2 class="text-sm font-semibold">抗跌安全邊際</h2>
-      <p class="mt-1 text-xs text-ink-400">組合 beta {{ s.beta.toFixed(2) }}（現金、債券與約定存款為 0，槓桿 ETF 依倍數）</p>
+      <p class="mt-1 text-xs text-ink-400">組合 beta {{ s.beta.toFixed(2) }}<InfoTip k="beta" />（現金、債券與約定存款為 0，槓桿 ETF 依倍數）</p>
     </div>
 
     <div>
-      <p class="label">可承受大盤下跌</p>
+      <p class="label">可承受大盤下跌<InfoTip k="cushion" /></p>
       <p v-if="s.max_market_drop != null" class="num mt-1 text-2xl font-semibold text-accent">{{ pct(s.max_market_drop, 0) }}</p>
       <p v-else class="mt-1 text-lg font-semibold text-ink-300">尚未進入安全區</p>
       <p class="mt-1 text-xs text-ink-400">
@@ -26,13 +27,13 @@ const fxGap = computed(() => (fx.value.live && fx.value.ma200 ? fx.value.live / 
     </div>
 
     <div>
-      <p class="label">若大盤下跌 {{ pct(s.drop, 0) }}</p>
+      <p class="label">若大盤下跌 {{ pct(s.drop, 0) }}<InfoTip k="stress" /></p>
       <p class="num mt-1 text-lg font-semibold">達成率 {{ pct(s.stressed_progress) }}</p>
       <p class="mt-1 text-xs text-ink-400">資產約 {{ wan(s.stressed_value) }}・定期定額不受影響</p>
     </div>
 
-    <div class="border-t border-ink-700/70 pt-4">
-      <p class="label">美元匯率</p>
+    <div class="border-t border-ink-700/70 pt-4" data-tour="fx">
+      <p class="label">美元匯率<InfoTip k="fx" /></p>
       <dl class="num mt-2 grid grid-cols-2 gap-y-1 text-sm">
         <dt class="text-ink-400">即時</dt>
         <dd class="text-right">{{ fx.live?.toFixed(3) ?? '—' }}</dd>
