@@ -16,7 +16,7 @@ const RIGHT: { key: MobileTab; label: string }[] = [
 
 <template>
   <nav
-    class="tabs fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 items-end border-t border-ink-800 px-1 pt-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:hidden"
+    class="tabs fixed inset-x-0 bottom-[calc(-1*var(--ios-gap,0px))] z-30 grid grid-cols-5 items-end border-t border-ink-800 px-1 pt-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:hidden"
     aria-label="分頁"
     data-tour="view-switch"
   >
