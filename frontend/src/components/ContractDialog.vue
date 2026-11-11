@@ -10,8 +10,8 @@ const emit = defineEmits<{ close: []; changed: [] }>()
 const form = reactive<ContractInput>({
   name: props.contract?.name ?? '',
   start_month: props.contract?.start_month ?? '',
-  monthly_deposit: props.contract?.monthly_deposit ?? 10000,
-  term_months: props.contract?.term_months ?? 120,
+  monthly_deposit: props.contract?.monthly_deposit ?? 5000,
+  term_months: props.contract?.term_months ?? 60,
   payout: props.contract?.payout ?? 0,
   valuation: props.contract?.valuation ?? 'accrued',
   closed: props.contract?.closed ?? false,
