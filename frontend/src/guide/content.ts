@@ -123,7 +123,7 @@ export function dashboardTour(s?: Summary, c?: Config): TourStep[] {
       title: '歡迎來到營火旁',
       body: [
         '這裡追蹤的是 Coast FIRE：存到一個「就算從此不再投入，複利也會在退休時幫你長到目標」的金額。',
-        '接下來用一分鐘帶你看每個數字的意思。可以用 ← → 鍵切換，Esc 隨時離開。',
+        '接下來用一分鐘帶你看每個數字的意思。',
       ],
     },
     {
@@ -250,7 +250,6 @@ export function collectTour(): TourStep[] {
       title: '收集冊：只看股數',
       body: [
         '這裡把投資變成慢慢收集。不看每天的市值漲跌，只看股數一點一點變多。',
-        '用 ← → 鍵切換，Esc 隨時離開。',
       ],
     },
     {
