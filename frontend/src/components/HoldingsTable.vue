@@ -23,7 +23,9 @@ const named = (r: Position) => r.market === 'CASH' || r.market === 'CONTRACT'
     <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
       <div>
         <h2 class="text-sm font-semibold">持倉</h2>
-        <p class="text-xs text-ink-400">共 {{ wan(holdings.total_twd) }}・點「記錄」新增買賣或補登過去的股數</p>
+        <p class="text-xs text-ink-400">
+          共 {{ wan(holdings.total_twd) }}・<span class="hidden md:inline">點「記錄」新增買賣或補登過去的股數</span><span class="md:hidden">點一列記錄買賣</span>
+        </p>
       </div>
       <div class="flex flex-wrap items-center gap-3">
         <label class="flex cursor-pointer items-center gap-2 text-xs text-ink-400">
@@ -40,7 +42,40 @@ const named = (r: Position) => r.market === 'CASH' || r.market === 'CONTRACT'
       </div>
     </div>
 
-    <div class="relative -mx-5 overflow-x-auto">
+    <!-- Phones: one tappable row per holding; tap to record a trade, pencil to edit. -->
+    <ul class="-mx-5 md:hidden">
+      <li v-for="r in rows" :key="r.symbol" class="flex items-stretch border-b border-ink-800 last:border-0" :class="r.archived ? 'opacity-50' : ''">
+        <button
+          class="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 py-3 pl-5 text-left active:bg-ink-800/60"
+          @click="r.contract ? emit('edit', r) : emit('record', r)"
+        >
+          <span class="min-w-0">
+            <span class="flex items-center gap-1.5">
+              <span class="truncate font-medium">{{ named(r) ? r.name : r.symbol.replace(/\.TWO?$/, '') }}</span>
+              <span class="flex-none rounded bg-ink-800 px-1.5 py-0.5 text-[10px] text-ink-400">{{ MARKET_LABEL[r.market] }}</span>
+            </span>
+            <span class="mt-0.5 block truncate text-xs text-ink-400">
+              <template v-if="r.contract">{{ r.contract.paid_months }} / {{ r.contract.term_months }} 期・每月 {{ money(r.contract.monthly_deposit) }}</template>
+              <template v-else-if="r.market === 'CASH'">{{ money(r.shares, r.currency) }}</template>
+              <template v-else>{{ shares(r.shares, r.market) }}・{{ price(r.price, r.currency) }}</template>
+            </span>
+          </span>
+          <span class="num text-right">
+            <span class="block text-sm">{{ r.value_twd != null ? wan(r.value_twd) : '—' }}</span>
+            <span class="block text-xs text-ink-400">
+              {{ pct(r.weight) }}
+              <template v-if="showPnl && r.pnl_native != null && !named(r)">・{{ (r.pnl_native >= 0 ? '+' : '') + money(r.pnl_native, r.currency) }}</template>
+            </span>
+          </span>
+        </button>
+        <button class="flex-none px-4 text-ink-400 active:text-ink-100" :aria-label="'編輯 ' + r.symbol" @click="emit('edit', r)">
+          <svg viewBox="0 0 20 20" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M13.5 3.5l3 3L7 16H4v-3z" /></svg>
+        </button>
+      </li>
+      <li v-if="!rows.length" class="px-5 py-10 text-center text-sm text-ink-400">還沒有持倉，按「新增標的」開始。</li>
+    </ul>
+
+    <div class="relative -mx-5 hidden overflow-x-auto md:block">
       <table class="w-full min-w-[720px] text-sm">
         <thead>
           <tr class="border-b border-ink-700/70 text-left text-xs text-ink-400">

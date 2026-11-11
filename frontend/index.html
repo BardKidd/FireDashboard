@@ -2,15 +2,74 @@
 <html lang="zh-Hant" class="dark">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#15100d" />
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><path d='M16 3C18 10 25 13 25 21a9 9 0 0 1-18 0c0-4 2-6 4-8 0 3 1 5 3 5-1-6 1-11 2-15z' fill='%23f59e4b'/></svg>" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="營火" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" type="image/svg+xml" href="/icons/icon.svg" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" />
     <title>FireDashboard</title>
+    <style>
+      /* Kindling splash: painted by the HTML before any script runs; App.vue fades it out once the first data arrives. */
+      html, body { background: #15100d; margin: 0; }
+      .kindle { position: fixed; inset: 0; z-index: 70; display: grid; place-content: center; justify-items: center; gap: 14px;
+        background: radial-gradient(28rem 22rem at 50% 46%, rgba(245, 158, 75, 0.12), transparent 70%), #15100d;
+        color: #a8968a; font: 14px "LXGW WenKai TC", "Kaiti TC", serif; letter-spacing: .12em; transition: opacity .45s ease; }
+      .kindle.out { opacity: 0; pointer-events: none; }
+      .kindle svg { width: 132px; height: 132px; overflow: visible; }
+      .kindle .log { animation: k-log .55s cubic-bezier(.2, .9, .3, 1.2) both; }
+      .kindle .log.b { animation-delay: .12s; --from: 34px; }
+      .kindle .log.a { --from: -34px; }
+      .kindle .flame { transform-box: fill-box; transform-origin: 50% 100%; animation: k-grow .9s cubic-bezier(.3, 1.4, .5, 1) .55s both; }
+      .kindle .tongue { transform-box: fill-box; transform-origin: 50% 100%; animation: k-flick 1.4s ease-in-out 1.4s infinite alternate; }
+      .kindle .tongue.m { animation-duration: 1s; }
+      .kindle .tongue.c { animation-duration: .8s; }
+      .kindle .glow { animation: k-glow 2s ease-in-out .6s infinite alternate both; }
+      .kindle .ember { animation: k-ember 2.2s linear infinite; opacity: 0; }
+      .kindle .ember:nth-of-type(2) { animation-delay: 1.3s; animation-duration: 2.6s; }
+      .kindle .ember:nth-of-type(3) { animation-delay: 1.9s; animation-duration: 2s; }
+      .kindle .dots::after { content: ""; animation: k-dots 1.6s steps(4) infinite; }
+      @keyframes k-log { from { transform: translateX(var(--from)); opacity: 0; } }
+      @keyframes k-grow { from { transform: scale(0); } }
+      @keyframes k-flick { 0% { transform: scale(1, 1) skewX(0); } 40% { transform: scale(.94, 1.07) skewX(3deg); } 100% { transform: scale(1.04, .95) skewX(-3deg); } }
+      @keyframes k-glow { from { opacity: .55; } to { opacity: 1; } }
+      @keyframes k-ember { 0% { transform: translate(0, 0); opacity: 0; } 15% { opacity: 1; } 100% { transform: translate(var(--dx, 6px), -70px); opacity: 0; } }
+      @keyframes k-dots { 0% { content: ""; } 25% { content: "."; } 50% { content: ".."; } 75% { content: "..."; } }
+      @media (prefers-reduced-motion: reduce) { .kindle *, .kindle *::after { animation: none !important; } .kindle .ember { opacity: 0; } }
+    </style>
   </head>
   <body>
+    <div class="kindle" id="kindle" role="status" aria-label="載入中">
+        <svg viewBox="0 0 120 120" aria-hidden="true">
+          <defs>
+            <radialGradient id="k-glow" cx="50%" cy="60%" r="50%"><stop offset="0" stop-color="#ff8a3d" stop-opacity=".5" /><stop offset="1" stop-color="#c85a1e" stop-opacity="0" /></radialGradient>
+            <linearGradient id="k-o" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ff6a2b" /><stop offset="1" stop-color="#d9431c" /></linearGradient>
+            <linearGradient id="k-m" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ffb347" /><stop offset="1" stop-color="#ff7a2e" /></linearGradient>
+            <linearGradient id="k-c" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#fff3c4" /><stop offset="1" stop-color="#ffd36e" /></linearGradient>
+          </defs>
+          <ellipse class="glow" cx="60" cy="74" rx="56" ry="40" fill="url(#k-glow)" />
+          <g stroke-linecap="round">
+            <g class="log a"><path d="M33 92 L87 79" stroke="#3b2618" stroke-width="11" /><path d="M33 90.5 L87 77.5" stroke="#5a3b26" stroke-width="9" /><ellipse cx="88" cy="77.5" rx="3" ry="4.5" transform="rotate(-14 88 77.5)" fill="#d9b07a" /></g>
+            <g class="log b"><path d="M87 92 L33 79" stroke="#3b2618" stroke-width="11" /><path d="M87 90.5 L33 77.5" stroke="#6a4630" stroke-width="9" /><ellipse cx="32" cy="77.5" rx="3" ry="4.5" transform="rotate(14 32 77.5)" fill="#d9b07a" /></g>
+          </g>
+          <g class="flame">
+            <path class="tongue" d="M60 18 C65 35 82 44 82 63 A22 22 0 0 1 38 63 C38 51.5 44 45.5 49.5 40 C49.5 48.5 52.5 54 58 54.5 C54 39 57 27.5 60 18 Z" fill="url(#k-o)" />
+            <path class="tongue m" d="M60.5 37 C63.5 48.5 74.5 54 74.5 65.5 A14.5 14.5 0 0 1 45.5 65.5 C45.5 58.5 49.5 54 53 51 C53.5 56.5 55.5 59.5 59 60 C57 52 58.5 44 60.5 37 Z" fill="url(#k-m)" />
+            <path class="tongue c" d="M60.5 54 C62.5 60.5 68 63.5 68 69.5 A7.75 7.75 0 0 1 52.5 69.5 C52.5 65.5 55 63 57 61.5 C57.5 64.5 58.5 66 60 66 C59 62 59.5 58 60.5 54 Z" fill="url(#k-c)" />
+          </g>
+          <circle class="ember" cx="56" cy="50" r="1.6" fill="#ffd36e" style="--dx: -8px" />
+          <circle class="ember" cx="64" cy="48" r="1.3" fill="#ff8a3d" style="--dx: 10px" />
+          <circle class="ember" cx="60" cy="52" r="1.1" fill="#ffd36e" style="--dx: 3px" />
+        </svg>
+        <span class="dots">生火中</span>
+    </div>
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>

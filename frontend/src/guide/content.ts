@@ -1,6 +1,7 @@
 // Words for the guided tour and the "?" tips. One place, so the tour and the
 // tips never disagree about what a number means.
 import type { Config, Summary } from '../api'
+import type { MobileTab } from '../mobile'
 import { money, pct, wan } from '../format'
 
 export interface Explain {
@@ -111,14 +112,17 @@ export interface TourStep {
   target?: string
   title: string
   body: string[]
+  /** Phone layout: the bottom tab that holds the target. */
+  tab?: MobileTab
+  mobileOnly?: boolean
 }
 
 export type TourName = 'dashboard' | 'collect'
 
-export function dashboardTour(s?: Summary, c?: Config): TourStep[] {
+export function dashboardTour(s?: Summary, c?: Config, mobile = false): TourStep[] {
   const rr = s ? pct(s.real_return) : '實質報酬'
   const years = s ? Math.round(s.months_remaining / 12) : null
-  return [
+  const steps: TourStep[] = [
     {
       title: '歡迎來到營火旁',
       body: [
@@ -128,15 +132,18 @@ export function dashboardTour(s?: Summary, c?: Config): TourStep[] {
     },
     {
       target: 'campfire',
+      tab: 'fire',
       title: '這堆營火就是你的投資組合',
       body: [
         '每根柴是一檔持股（小的會合併成一組），越粗代表占比越高。',
         '火焰高度是 Coast 達成率；黃色虛線輪廓是 100%，火燒到那裡就不用再添柴。',
         '大盤下跌的日子火會被風吹得晃一點，但柴都還在。',
+        '點一根柴，可以直接記錄那檔的買賣。',
       ],
     },
     {
       target: 'assets',
+      tab: 'fire',
       title: '柴堆（總資產）',
       body: [
         '所有持股、現金與約定存款換算成台幣的總和。',
@@ -145,6 +152,7 @@ export function dashboardTour(s?: Summary, c?: Config): TourStep[] {
     },
     {
       target: 'progress',
+      tab: 'fire',
       title: '火勢（Coast 達成率）',
       body: [
         '總資產 ÷ 今天的 Coast 線。',
@@ -159,6 +167,7 @@ export function dashboardTour(s?: Summary, c?: Config): TourStep[] {
     },
     {
       target: 'coast-date',
+      tab: 'fire',
       title: '不用再添柴',
       body: [
         c
@@ -169,6 +178,7 @@ export function dashboardTour(s?: Summary, c?: Config): TourStep[] {
     },
     {
       target: 'income',
+      tab: 'fire',
       title: '現在停手，退休後每月可領',
       body: [
         '假設今天起完全不再投入，現有資產長到退休後，用安全提領率每月可以領多少。',
@@ -177,6 +187,7 @@ export function dashboardTour(s?: Summary, c?: Config): TourStep[] {
     },
     {
       target: 'trajectory',
+      tab: 'path',
       title: 'Coast FIRE 雙軌預測',
       body: [
         '虛線是每個月的 Coast 門檻，會一路往上走到退休時的終點。',
@@ -186,6 +197,7 @@ export function dashboardTour(s?: Summary, c?: Config): TourStep[] {
     },
     {
       target: 'stress',
+      tab: 'path',
       title: '抗跌安全邊際',
       body: [
         '組合 beta：整體跟大盤連動的程度。現金、債券、約定存款算 0，槓桿 ETF 依倍數。',
@@ -195,6 +207,7 @@ export function dashboardTour(s?: Summary, c?: Config): TourStep[] {
     },
     {
       target: 'fx',
+      tab: 'path',
       title: '美元匯率',
       body: [
         '列出即時匯率與 200 日均匯率。',
@@ -203,15 +216,25 @@ export function dashboardTour(s?: Summary, c?: Config): TourStep[] {
     },
     {
       target: 'holdings',
+      tab: 'logs',
       title: '持倉',
       body: [
         '「新增標的」加入台股或美股（代號會自動抓報價），「＋ 約定存款」加入儲蓄險或零存整付。',
-        '每列的「記錄」可以新增買賣，或補登過去某天的股數；鉛筆可以改名稱、類型與 beta。',
+        mobile
+          ? '點一列就能新增買賣，或補登過去某天的股數；鉛筆可以改名稱、類型與 beta。'
+          : '每列的「記錄」可以新增買賣，或補登過去某天的股數；鉛筆可以改名稱、類型與 beta。',
         '占比就是營火裡那根柴的粗細。勾選「顯示成本與損益」才會出現均價與未實現損益。',
       ],
     },
     {
+      target: 'add-fab',
+      mobileOnly: true,
+      title: '添柴',
+      body: ['底部中間的「＋」隨時可以記錄買賣，也能加入新的標的或約定存款。'],
+    },
+    {
       target: 'dividends',
+      tab: 'logs',
       title: '股息入帳',
       body: [
         '依除息資料自動計算，稅後金額直接加進現金，不用手動記。',
@@ -229,12 +252,18 @@ export function dashboardTour(s?: Summary, c?: Config): TourStep[] {
     {
       target: 'refresh',
       title: '更新報價',
-      body: ['系統每天收盤後會自動抓價，想馬上更新可以按這裡。左上角會顯示報價更新到哪一天。'],
+      body: [
+        '系統每天收盤後會自動抓價，想馬上更新可以按這裡。左上角會顯示報價更新到哪一天。',
+        ...(mobile ? ['在頁面最上方往下拉，也能更新報價。'] : []),
+      ],
     },
     {
       target: 'view-switch',
-      title: '儀表板與收集冊',
-      body: ['「收集冊」是只看股數、不看市值的收集模式，有打卡、成就與獎勵。第一次打開時也會有導覽。'],
+      title: mobile ? '底部分頁' : '儀表板與收集冊',
+      body: [
+        ...(mobile ? ['營火、柴堆（持股與股息）、軌跡（預測圖與抗跌）分在不同分頁。'] : []),
+        '「收集冊」是只看股數、不看市值的收集模式，有打卡、成就與獎勵。第一次打開時也會有導覽。',
+      ],
     },
     {
       target: 'help',
@@ -242,6 +271,7 @@ export function dashboardTour(s?: Summary, c?: Config): TourStep[] {
       body: ['按「導覽」就能重新播放這段介紹。各數值旁的小「?」也可以隨時點開看定義。'],
     },
   ]
+  return steps.filter((x) => mobile || !x.mobileOnly)
 }
 
 export function collectTour(): TourStep[] {
