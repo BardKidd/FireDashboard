@@ -149,8 +149,8 @@ class PortfolioSnapshot(Base):
 
 
 class FixedContract(Base):
-    """A fixed-payout savings agreement, e.g. deposit 10,000 TWD a month for
-    120 months and receive 2,000,000 TWD at the end."""
+    """A fixed-payout savings agreement, e.g. deposit 5,000 TWD a month for
+    60 months and receive 350,000 TWD at the end."""
 
     __tablename__ = "fixed_contracts"
 

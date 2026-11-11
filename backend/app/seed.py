@@ -10,8 +10,8 @@ Format:
      "asset_type": "equity", "date": "2026-11-10", "note": "初始持倉"}
   ],
   "contracts": [
-    {"name": "家人約定存款", "start_month": "2021-09", "monthly_deposit": 10000,
-     "term_months": 120, "payout": 2000000}
+    {"name": "定期存款", "start_month": "2024-01", "monthly_deposit": 5000,
+     "term_months": 60, "payout": 350000}
   ]
 }
 
