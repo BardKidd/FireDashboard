@@ -49,6 +49,11 @@ function option(): echarts.EChartsCoreOption {
   const d = data.value
   const hit = props.timeToCoast.status === 'reachable' ? props.timeToCoast.month : null
   const hitIdx = hit ? d.months.indexOf(hit) : -1
+  // Phones: the legend wraps to two rows and year labels need thinning.
+  const narrow = (el.value?.clientWidth ?? 800) < 520
+  const firstYear = Number(d.months[0]?.slice(0, 4) ?? 0)
+  const years = Number(d.months[d.months.length - 1]?.slice(0, 4) ?? 0) - firstYear + 1
+  const yearStep = Math.max(1, Math.ceil(years / (narrow ? 5 : 10)))
   const line = (name: string, values: (number | null)[], color: string, extra: object = {}) => ({
     name,
     type: 'line',
@@ -63,14 +68,14 @@ function option(): echarts.EChartsCoreOption {
   return {
     backgroundColor: 'transparent',
     animationDuration: 600,
-    grid: { left: 8, right: 16, top: 40, bottom: 8, containLabel: true },
+    grid: { left: 8, right: 16, top: narrow ? 64 : 40, bottom: 12, containLabel: true },
     legend: {
       top: 0,
       left: 0,
       icon: 'roundRect',
       itemWidth: 14,
       itemHeight: 4,
-      textStyle: { color: '#cdbcae', fontSize: 12 },
+      textStyle: { color: '#cdbcae', fontSize: narrow ? 11 : 12 },
     },
     tooltip: {
       trigger: 'axis',
@@ -86,7 +91,12 @@ function option(): echarts.EChartsCoreOption {
       boundaryGap: false,
       axisLine: { lineStyle: { color: COLORS.grid } },
       axisTick: { show: false },
-      axisLabel: { color: COLORS.axis, formatter: (v: string) => (v.endsWith('-01') ? v.slice(0, 4) : '') , interval: 0, hideOverlap: true },
+      axisLabel: {
+        color: COLORS.axis,
+        interval: (_: number, v: string) => v.endsWith('-01') && (Number(v.slice(0, 4)) - firstYear) % yearStep === 0,
+        formatter: (v: string) => v.slice(0, 4),
+        hideOverlap: true,
+      },
     },
     yAxis: {
       type: 'value',
@@ -131,7 +141,15 @@ let ro: ResizeObserver | undefined
 onMounted(() => {
   chart.value = echarts.init(el.value!, undefined, { renderer: 'canvas' })
   render()
-  ro = new ResizeObserver(() => chart.value?.resize())
+  let wasNarrow = el.value!.clientWidth < 520
+  ro = new ResizeObserver(() => {
+    const narrow = el.value!.clientWidth < 520
+    if (narrow !== wasNarrow) {
+      wasNarrow = narrow
+      render()
+    }
+    chart.value?.resize()
+  })
   ro.observe(el.value!)
 })
 onBeforeUnmount(() => {
