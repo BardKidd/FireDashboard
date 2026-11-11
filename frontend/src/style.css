@@ -24,6 +24,15 @@ html, body {
   font-family: var(--font-sans);
   font-feature-settings: "tnum";
 }
+/*
+ * iOS home-screen app: with a translucent status bar, a tap on a page shorter
+ * than the screen can make iOS shrink the layout viewport by the status-bar
+ * height, lifting bottom:0 UI off the edge. index.html now uses an opaque
+ * status bar (inset is then 0 and this is a no-op); kept as a fallback.
+ */
+@media (display-mode: standalone) {
+  html { min-height: calc(100% + env(safe-area-inset-top)); }
+}
 body {
   /* Faint firelight from above the fold. */
   background-image: radial-gradient(70rem 40rem at 50% -8rem, rgba(245, 158, 75, 0.09), transparent 70%);

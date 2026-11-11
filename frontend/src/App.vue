@@ -32,6 +32,7 @@ import PullRefresh from './components/PullRefresh.vue'
 import QuickAddSheet from './components/QuickAddSheet.vue'
 import { isMobile, type MobileTab } from './mobile'
 import { hideSplash, offlineSince } from './pwa'
+import { onLogoTap } from './viewport-debug'
 
 type View = 'dashboard' | 'collect'
 function savedView(): View {
@@ -250,7 +251,7 @@ const errorDetail = computed(() =>
   >
     <header class="mb-4 flex items-center justify-between gap-x-3 gap-y-3 md:mb-6 md:flex-wrap md:gap-x-4">
       <div class="flex min-w-0 items-center gap-3">
-        <svg viewBox="0 0 32 32" class="logo h-9 w-9 flex-none text-accent" aria-hidden="true">
+        <svg viewBox="0 0 32 32" class="logo h-9 w-9 flex-none text-accent" aria-hidden="true" @click="onLogoTap">
           <path class="outer" d="M16 3C18 10 25 13 25 21a9 9 0 0 1-18 0c0-4 2-6 4-8 0 3 1 5 3 5-1-6 1-11 2-15z" fill="currentColor" />
           <path class="inner" d="M16 15c1 3 4 4 4 7a4 4 0 0 1-8 0c0-2 1-3 2-4 0 1 .5 2 1.5 2-.5-2 0-4 .5-5z" fill="#ffd36e" />
         </svg>
