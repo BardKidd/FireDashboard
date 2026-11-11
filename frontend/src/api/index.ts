@@ -319,10 +319,17 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   try {
     res = await fetch('/api' + path, {
       headers: { 'Content-Type': 'application/json' },
+      // The API never redirects. A redirect means a login in front of the app
+      // (Cloudflare Access) has expired, so reload the page to show its sign-in.
+      redirect: 'manual',
       ...init,
     })
   } catch {
     throw new Error(navigator.onLine ? '連不到伺服器，稍後再試一次' : '目前沒有網路，連上後再試一次')
+  }
+  if (res.type === 'opaqueredirect') {
+    window.location.reload()
+    throw new Error('登入已過期，正在重新整理…')
   }
   noteResponse(res)
   if (!res.ok) {

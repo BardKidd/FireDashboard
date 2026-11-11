@@ -4,10 +4,10 @@
 
 整個流程分成兩段：
 
-1. **把 FireDashboard 跑在 Oracle 主機上**（這份文件）。做完時只有你自己透過 SSH 看得到它，外面的人連不進來。
-2. **加上 https 和登入**，讓手機能從外面連進來（另一份文件，看你選哪種登入方式）。
+1. **把 FireDashboard 跑在 Oracle 主機上**（第 1～7 節）。做完時只有你自己透過 SSH 看得到它，外面的人連不進來。
+2. **用 Cloudflare 開一個 https 子網址，並加上 email 驗證碼登入**（第 8～10 節），手機就能從任何地方連進來。
 
-第 1 段做完、確認一切正常，再做第 2 段。登入還沒設好之前，**不要**把 `.env` 的 `FIRE_BIND` 改成 `0.0.0.0`，也不要在 Oracle 開放 80、443 以外的埠。
+第 1 段做完、確認一切正常，再做第 2 段。整個過程**不需要**在 Oracle 開放任何對外的埠，`.env` 的 `FIRE_BIND` 也一直維持 `127.0.0.1`。
 
 ---
 
@@ -164,6 +164,72 @@ cd ~/FireDashboard && git pull && docker compose up -d --build
 
 ---
 
-## 下一步：從手機連進來
+## 8. 建立 Cloudflare Tunnel
 
-到這裡 FireDashboard 已經在雲端 24 小時跑著了，但還沒有對外開放。接下來加上 https 網址和登入，手機就能從任何地方連進來，也能「加到主畫面」並離線看資料。
+Tunnel 是主機上的一個小程式，它主動連到 Cloudflare，手機連 `https://fire.你的網域` 時，Cloudflare 再沿著這條線把連線送回主機。主機不用開任何埠，也不用固定 IP。
+
+以下假設你的網域已經在 Cloudflare 上管理。新增子網址不會影響網域底下原本的網站或專案。
+
+1. 登入 Cloudflare，左邊選單點 **Zero Trust**。
+   - 第一次進來會要你取一個 team name（隨便取，例如 `valens`），方案選 **Free**。Free 方案可能也要求填付款方式，但 50 人以內不收費。
+2. **Networks → Tunnels**（新版介面可能叫 **Connectors**）→ **Create a tunnel** → 選 **Cloudflared**。
+3. 名稱填 `firedashboard` → **Save tunnel**。
+4. 安裝方式選 **Docker**，畫面上會出現一行 `docker run ... --token eyJ...`。**只複製 `--token` 後面那一長串**，這就是 token。它等同於這條通道的鑰匙，不要貼到別的地方。
+5. 按 **Next**，設定 **Public hostname**：
+   - Subdomain：`fire`
+   - Domain：選你的網域
+   - Service Type：`HTTP`
+   - URL：`frontend:80`
+6. **Save tunnel**。
+
+回到 Oracle 主機，編輯 `.env`（`nano ~/FireDashboard/.env`），把最下面兩行的 `#` 拿掉並貼上 token：
+
+```bash
+COMPOSE_FILE=docker-compose.yml:docker-compose.tunnel.yml
+CF_TUNNEL_TOKEN=eyJ...（剛剛複製的 token）
+```
+
+存檔，**先不要啟動**，接著做第 9 節把登入設好。
+
+---
+
+## 9. 加上 email 驗證碼登入（Cloudflare Access）
+
+1. Zero Trust → **Access → Applications** → **Add an application** → **Self-hosted**。
+2. **Application name**：`FireDashboard`。
+3. **Application domain**：Subdomain `fire`，Domain 選你的網域。
+4. **Session Duration** 選 **1 month**，這樣手機一個月才需要重新登入一次。
+5. 下一步建立 **Policy**：
+   - Policy name：`只有我`
+   - Action：**Allow**
+   - Include → Selector 選 **Emails**，填你自己的 email。
+6. 登入方式維持預設的 **One-time PIN**，存檔。
+
+之後想讓家人也能看，回到這個 Policy 多加一個 email 就好。
+
+### 啟動 Tunnel
+
+登入設好了，回到 Oracle 主機啟動：
+
+```bash
+cd ~/FireDashboard && docker compose up -d
+docker compose logs cloudflared | tail
+```
+
+看到 `Registered tunnel connection` 就代表接上了，Cloudflare 的 Tunnel 頁面也會顯示 **Healthy**。
+
+測試：用無痕視窗打開 `https://fire.你的網域`，應該先看到 Cloudflare 的登入頁。填你的 email，信箱會收到 6 位數驗證碼，輸入後才會看到 FireDashboard。換一個沒加進名單的 email 試試，應該收不到碼也進不去。
+
+---
+
+## 10. 手機加到主畫面
+
+1. 手機瀏覽器打開 `https://fire.你的網域`，用 email 驗證碼登入。
+2. 加到主畫面：
+   - **iPhone**：Safari 下方的「分享」→「加入主畫面」。
+   - **Android**：Chrome 右上「⋮」→「安裝應用程式」或「加到主畫面」。
+3. 從主畫面打開營火圖示。iPhone 的主畫面 App 和 Safari 是分開記住登入的，所以**第一次從主畫面打開時要再登入一次**，之後一個月內都不用。
+
+現在是 https，離線功能也會啟用：沒有網路時打開，會顯示最後一次的資料，並標註是幾點的資料。
+
+登入過期時，App 會自動重新整理並帶你回 Cloudflare 的登入頁，重新收一次驗證碼就好。

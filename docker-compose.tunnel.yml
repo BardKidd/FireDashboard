@@ -1,0 +1,12 @@
+# Cloudflare Tunnel: makes FireDashboard reachable at your own https address
+# without opening any port on the server. Login is enforced by Cloudflare Access.
+# Turn it on by adding this file to COMPOSE_FILE in .env (see docs/deploy-oracle.md).
+services:
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    depends_on:
+      - frontend
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CF_TUNNEL_TOKEN:?set CF_TUNNEL_TOKEN in .env}
