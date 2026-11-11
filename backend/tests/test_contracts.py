@@ -6,7 +6,7 @@ from app import contracts
 from app.models import FixedContract
 
 
-def family(**kw):
+def plan(**kw):
     base = dict(id=1, name="定期存款", start_month="2024-01", monthly_deposit=5000, term_months=60,
                 payout=350_000, valuation="accrued", closed=False, note=None)
     base.update(kw)
@@ -14,14 +14,14 @@ def family(**kw):
 
 
 def test_paid_months_and_deposited():
-    i = contracts.info(family(), date(2026, 11, 10))
+    i = contracts.info(plan(), date(2026, 11, 10))
     assert i["paid_months"] == 35
     assert i["deposited"] == 175_000
     assert i["payout_month"] == "2029-01"
 
 
 def test_accrued_reaches_payout_at_maturity():
-    c = family()
+    c = plan()
     r = contracts.implied_monthly_rate(5000, 60, 350_000)
     assert (1 + r) ** 12 - 1 == pytest.approx(0.0610, abs=1e-3)
     before = contracts.info(c, date(2028, 12, 15))
@@ -31,7 +31,7 @@ def test_accrued_reaches_payout_at_maturity():
 
 def test_valuation_modes_and_closed():
     d = date(2026, 11, 10)
-    assert contracts.info(family(valuation="deposited"), d)["value"] == 175_000
-    assert contracts.info(family(), d)["value"] > 175_000
-    assert contracts.value_on(family(closed=True), d) == 0
-    assert contracts.info(family(), date(2023, 12, 1))["value"] == 0
+    assert contracts.info(plan(valuation="deposited"), d)["value"] == 175_000
+    assert contracts.info(plan(), d)["value"] > 175_000
+    assert contracts.value_on(plan(closed=True), d) == 0
+    assert contracts.info(plan(), date(2023, 12, 1))["value"] == 0

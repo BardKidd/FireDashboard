@@ -62,7 +62,7 @@ async function remove() {
     <form id="contract-form" class="grid gap-3" @submit.prevent="save">
       <label class="grid gap-1">
         <span class="label">名稱</span>
-        <input v-model="form.name" required class="input" placeholder="定期存款" />
+        <input v-model="form.name" required class="input" placeholder="例如：儲蓄險、定期存款" />
       </label>
       <div class="grid grid-cols-2 gap-3">
         <label class="grid gap-1">
