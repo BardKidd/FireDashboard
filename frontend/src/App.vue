@@ -247,7 +247,7 @@ const errorDetail = computed(() =>
 
 <template>
   <div
-    class="mx-auto max-w-7xl px-4 pt-[max(1rem,calc(env(safe-area-inset-top)+0.5rem))] pb-28 sm:px-6 md:pb-6 lg:pt-8 lg:pb-8"
+    class="app-shell mx-auto max-w-7xl px-4 pt-[max(1rem,calc(env(safe-area-inset-top)+0.5rem))] pb-28 sm:px-6 md:pb-6 lg:pt-8 lg:pb-8"
   >
     <header class="mb-4 flex items-center justify-between gap-x-3 gap-y-3 md:mb-6 md:flex-wrap md:gap-x-4">
       <div class="flex min-w-0 items-center gap-3">
@@ -366,6 +366,13 @@ const errorDetail = computed(() =>
 /* Phones: icon-only header buttons on one row with the title. */
 @media (max-width: 639px) {
   .hdr-btns :deep(.btn-ghost) { padding: 0.5rem; border-color: transparent; }
+}
+/*
+ * iOS home-screen app: iOS blurs a band just below the status bar, deeper than
+ * the safe-area inset, so start the header clear of it.
+ */
+@media (display-mode: standalone) and (max-width: 767px) {
+  .app-shell { padding-top: calc(env(safe-area-inset-top) + 2rem); }
 }
 /* The header flame breathes, a quiet sign the app is alive. */
 .logo .outer,
