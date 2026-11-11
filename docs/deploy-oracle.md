@@ -5,7 +5,7 @@
 整個流程分成兩段：
 
 1. **把 FireDashboard 跑在 Oracle 主機上**（第 1～7 節）。做完時只有你自己透過 SSH 看得到它，外面的人連不進來。
-2. **用 Cloudflare 開一個 https 子網址，並加上 email 驗證碼登入**（第 8～10 節），手機就能從任何地方連進來。
+2. **用 Cloudflare 開一個 https 子網址，並加上 email 驗證碼登入**（第 8～10 節），手機就能從任何地方連進來。這一段也可以單獨用在自己家裡一直開著的機器上。
 
 第 1 段做完、確認一切正常，再做第 2 段。整個過程**不需要**在 Oracle 開放任何對外的埠，`.env` 的 `FIRE_BIND` 也一直維持 `127.0.0.1`。
 
@@ -164,61 +164,78 @@ cd ~/FireDashboard && git pull && docker compose up -d --build
 
 ---
 
-## 8. 建立 Cloudflare Tunnel
+## 8. 建立 Cloudflare Tunnel 並啟動
 
 Tunnel 是主機上的一個小程式，它主動連到 Cloudflare，手機連 `https://fire.你的網域` 時，Cloudflare 再沿著這條線把連線送回主機。主機不用開任何埠，也不用固定 IP。
 
-以下假設你的網域已經在 Cloudflare 上管理。新增子網址不會影響網域底下原本的網站或專案。
+> 第 8～10 節不限定 Oracle。在家裡的 Linux VM、NAS 或任何一直開著、裝了 Docker 的機器上，步驟都一樣（2026-11-11 就是先在自己的 VM 上照這三節上線的）。
+
+以下假設你的網域已經在 Cloudflare 上管理。新增子網址不會影響網域底下原本的網站或專案。介面以 2026 年 11 月的 Cloudflare 為準。
 
 1. 登入 Cloudflare，左邊選單點 **Zero Trust**。
-   - 第一次進來會要你取一個 team name（隨便取，例如 `valens`），方案選 **Free**。Free 方案可能也要求填付款方式，但 50 人以內不收費。
-2. **Networks → Tunnels**（新版介面可能叫 **Connectors**）→ **Create a tunnel** → 選 **Cloudflared**。
-3. 名稱填 `firedashboard` → **Save tunnel**。
-4. 安裝方式選 **Docker**，畫面上會出現一行 `docker run ... --token eyJ...`。**只複製 `--token` 後面那一長串**，這就是 token。它等同於這條通道的鑰匙，不要貼到別的地方。
-5. 按 **Next**，設定 **Public hostname**：
-   - Subdomain：`fire`
-   - Domain：選你的網域
-   - Service Type：`HTTP`
-   - URL：`frontend:80`
-6. **Save tunnel**。
+   - 第一次進來會要你取一個 team name，方案選 **Free**（50 人以內不收費）。
+2. **Networks → Tunnels** → **Create Tunnel** → 選 **Cloudflared** → 名稱填 `firedashboard`。
+3. 作業系統選 **Docker**，畫面上會出現一行 `docker run ... --token eyJ...`。**只複製 `--token` 後面那一長串**，這就是 token。它等同於這條通道的鑰匙，不要貼到任何地方（包括聊天）。
+4. 這個頁面先開著，**Continue 要等通道連上才能按**。
 
-回到 Oracle 主機，編輯 `.env`（`nano ~/FireDashboard/.env`），把最下面兩行的 `#` 拿掉並貼上 token：
+回到主機，編輯 `.env`（`nano ~/FireDashboard/.env`），在最下面加上這兩行（`.env.example` 裡也有範本）：
 
 ```bash
 COMPOSE_FILE=docker-compose.yml:docker-compose.tunnel.yml
 CF_TUNNEL_TOKEN=eyJ...（剛剛複製的 token）
 ```
 
-存檔，**先不要啟動**，接著做第 9 節把登入設好。
-
----
-
-## 9. 加上 email 驗證碼登入（Cloudflare Access）
-
-1. Zero Trust → **Access → Applications** → **Add an application** → **Self-hosted**。
-2. **Application name**：`FireDashboard`。
-3. **Application domain**：Subdomain `fire`，Domain 選你的網域。
-4. **Session Duration** 選 **1 month**，這樣手機一個月才需要重新登入一次。
-5. 下一步建立 **Policy**：
-   - Policy name：`只有我`
-   - Action：**Allow**
-   - Include → Selector 選 **Emails**，填你自己的 email。
-6. 登入方式維持預設的 **One-time PIN**，存檔。
-
-之後想讓家人也能看，回到這個 Policy 多加一個 email 就好。
-
-### 啟動 Tunnel
-
-登入設好了，回到 Oracle 主機啟動：
+`COMPOSE_FILE` 的意思是「啟動時除了原本的設定，也把 Cloudflare Tunnel 一起開起來」。存檔（`Ctrl+O` → Enter → `Ctrl+X`）後啟動：
 
 ```bash
-cd ~/FireDashboard && docker compose up -d
+cd ~/FireDashboard && git pull && docker compose up -d --build
 docker compose logs cloudflared | tail
 ```
 
-看到 `Registered tunnel connection` 就代表接上了，Cloudflare 的 Tunnel 頁面也會顯示 **Healthy**。
+幾秒後回到 Cloudflare 的頁面，會顯示已連線，Tunnels 列表也會顯示 **Healthy**。這時還沒設定網址，外面連不進來，所以先啟動是安全的。
 
-測試：用無痕視窗打開 `https://fire.你的網域`，應該先看到 Cloudflare 的登入頁。填你的 email，信箱會收到 6 位數驗證碼，輸入後才會看到 FireDashboard。換一個沒加進名單的 email 試試，應該收不到碼也進不去。
+---
+
+## 9. 先設登入，再開放網址
+
+順序很重要：**先建立登入規則，再加網址路由**，這樣網址一開通，前面就已經有登入擋著。
+
+### 9-1. 建立 Access 應用程式（登入規則）
+
+1. Zero Trust → **Access controls → Applications** → **Create new application**。
+2. 上方選 **Self-hosted and private**，下面那排選 **Public DNS** → **Continue with Self-hosted and private**。
+3. **Public hostnames**：Subdomain 填 `fire`，Domain 選你的網域，Path 空白。
+4. **Access policies** → **Create new policy**：
+   - Policy Name：`Only Me`
+   - Action：**Allow**
+   - Policy session duration：維持 `Same as application session duration`
+   - 左邊 **Include** 的 Selector 選 **Emails**，填你收得到信的 email，按 Enter → **Save policy**。
+5. 往下到 **Details**：Name 填 `fire`，**Session Duration 選 1 month**（預設 24 小時，等於每天要收一次驗證碼）。
+6. 存檔。回到 Applications 列表，應該看到 `fire`，Destinations 是 `fire.你的網域`，Policies 是 `Only Me`。
+
+之後想讓家人也能看，到 **Access controls → Policies → Only Me** 多加一個 email 就好。
+
+### 9-2. 加網址路由
+
+1. Zero Trust → **Networks → Tunnels** → 點 `firedashboard` → **Add route** → 選 **Published application**。
+2. 填：
+   - **Subdomain**：`fire`（**一定要填**。留空會把整個網域都轉到 FireDashboard，蓋掉網域上原本的東西）
+   - **Domain**：你的網域
+   - **Path**：空白
+   - **Service URL**：`http://frontend:80`
+3. 確認 **Full hostname** 是 `fire.你的網域` → **Add route**。Cloudflare 會自動建好 DNS。
+
+`frontend:80` 是什麼：cloudflared 和 FireDashboard 都跑在同一個 docker compose 網路裡，容器之間用服務名稱互找。`frontend` 是前端 nginx 的服務名稱，`80` 是它在容器裡聽的埠。不能填 `localhost:8080`，因為對 cloudflared 容器來說 localhost 是它自己。
+
+### 9-3. 測試
+
+用無痕視窗打開 `https://fire.你的網域`（DNS 剛建好，打不開就等一兩分鐘）。應該先看到 **Cloudflare Access** 的登入頁：填 Only Me 規則裡的那個 email → **Send login code** → 輸入信裡的 6 位數驗證碼，之後才會看到 FireDashboard。
+
+填其他 email 時，Cloudflare 一樣會顯示已寄出，但不會真的寄信，這是為了不讓別人猜出哪些 email 有權限。
+
+### 換 token
+
+token 如果不小心外流（例如貼到聊天裡），到 Tunnel 頁面按 **Rotate token**，把新的貼進 `.env` 的 `CF_TUNNEL_TOKEN`，再執行 `docker compose up -d`。
 
 ---
 
