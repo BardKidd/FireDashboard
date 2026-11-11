@@ -55,7 +55,11 @@ cp .env.example .env
 
 改完執行 `docker compose up -d` 讓設定生效。
 
-> ⚠️ 這個系統**沒有登入功能**。設成 `0.0.0.0` 代表同網路的任何人都看得到你的資產，請只在信任的家用網路這樣做；要放到外網，請先在前面加一層有帳密的 reverse proxy。
+> ⚠️ 這個系統本身**沒有登入功能**。設成 `0.0.0.0` 代表同網路的任何人都看得到你的資產，請只在信任的家用網路這樣做。
+
+### 想從外面（手機）連進來
+
+照 [docs/deploy-oracle.md](docs/deploy-oracle.md) 部署到 Oracle Cloud 免費主機，用 Cloudflare Tunnel 開一個 https 子網址，並用 Cloudflare Access 加上 email 驗證碼登入。整個過程不用開任何對外的埠。
 
 ---
 
@@ -158,7 +162,7 @@ docker compose exec backend python -m app.seed /data/initial_holdings.json
 
 **加到主畫面**：iPhone 用 Safari 的「分享 → 加入主畫面」，Android 用 Chrome 選單的「安裝應用程式」。之後從主畫面打開就是全螢幕，沒有網址列。
 
-**離線**：網址是 `https://` 時（例如之後透過 Cloudflare Tunnel 連線），App 會記住最後一次的資料，沒網路也打得開，上方會寫著那是幾點的資料。用 `http://` 區網位址連線時，瀏覽器不允許離線功能，其他功能照常。
+**離線**：網址是 `https://` 時（例如照 [部署文件](docs/deploy-oracle.md) 透過 Cloudflare Tunnel 連線），App 會記住最後一次的資料，沒網路也打得開，上方會寫著那是幾點的資料。用 `http://` 區網位址連線時，瀏覽器不允許離線功能，其他功能照常。
 
 ---
 
