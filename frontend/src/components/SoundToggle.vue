@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue'
-import { playMusic, stopMusic } from '../music'
+import { currentTrackName, onTrackChange, playMusic, stopMusic } from '../music'
 
 const KEY = 'fire.sound'
 const on = ref(false)
+const song = ref(currentTrackName())
+const offTrackChange = onTrackChange((name) => (song.value = name))
 
 function save(v: boolean) {
   try {
@@ -51,6 +53,7 @@ onMounted(() => {
   }
 })
 onBeforeUnmount(() => {
+  offTrackChange()
   resumeOnInteraction()
   stopMusic()
 })
@@ -60,7 +63,7 @@ onBeforeUnmount(() => {
   <button
     class="btn-ghost"
     :aria-pressed="on"
-    :title="on ? '關掉背景音樂' : '播放背景音樂'"
+    :title="on ? `正在播放：${song}（點一下靜音）` : '播放背景音樂'"
     :aria-label="on ? '關掉背景音樂' : '播放背景音樂'"
     @click.stop="toggle"
   >

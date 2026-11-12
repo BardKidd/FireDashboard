@@ -1,26 +1,29 @@
 /**
- * Campfire waltz: a short G-major melody in 3/4, synthesized with Web Audio.
- * No audio files, so the nginx image stays the same size.
+ * Campfire music: twenty gentle tunes (see music-tracks.ts) played in turn by
+ * one soft pluck, synthesized with Web Audio. No audio files, so the nginx
+ * image stays the same size.
+ *
+ * Each tune plays twice, then hands over to the next: the old tune's last
+ * notes and reverb fade out while the new one fades in over a few seconds.
  */
-const NOTES: Record<string, number> = {
-  D4: 293.66, E4: 329.63, 'F#4': 369.99, G4: 392.0, A4: 440.0, B4: 493.88, C5: 523.25, D5: 587.33, E5: 659.25,
-}
+import { TRACKS, parseMelody, type Note } from './music-tracks'
 
-// [note, beats]; null is a rest. 16 bars plus one bar of breath before it loops.
-const SONG: [string | null, number][] = [
-  ['D4', 1], ['G4', 1], ['B4', 1], ['D5', 2], ['B4', 1], ['C5', 1], ['B4', 1], ['A4', 1], ['G4', 3],
-  ['E4', 1], ['G4', 1], ['C5', 1], ['B4', 2], ['G4', 1], ['A4', 1], ['B4', 1], ['A4', 1], ['D4', 3],
-  ['D4', 1], ['G4', 1], ['B4', 1], ['D5', 2], ['E5', 1], ['D5', 1], ['B4', 1], ['G4', 1], ['C5', 2], ['E5', 1],
-  ['D5', 1], ['B4', 1], ['G4', 1], ['A4', 2], ['B4', 1], ['A4', 2], ['F#4', 1], ['G4', 3], [null, 3],
-]
-const BEAT = 60 / 80
 const VOLUME = 0.16
+const PLAYS_PER_TRACK = 2
+const FADE_IN = 3
+const FADE_OUT = 5
+
+const SONGS: Note[][] = TRACKS.map(parseMelody)
 
 let ctx: AudioContext | undefined
 let out: GainNode
 let timer: number | undefined
+let trackGain: GainNode | undefined
+let track = Math.floor(Math.random() * TRACKS.length)
 let idx = 0
+let plays = 0
 let next = 0
+const listeners = new Set<(name: string) => void>()
 
 function setup() {
   const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
@@ -49,7 +52,7 @@ function setup() {
 }
 
 /** A soft plucked note that holds for its beats, then fades over ~1.6 s. */
-function pluck(freq: number, t: number, dur: number) {
+function pluck(dest: AudioNode, freq: number, t: number, dur: number) {
   const c = ctx!
   const g = c.createGain()
   g.gain.setValueAtTime(0, t)
@@ -57,7 +60,7 @@ function pluck(freq: number, t: number, dur: number) {
   g.gain.exponentialRampToValueAtTime(0.3, t + 0.4)
   g.gain.setValueAtTime(0.3 * Math.pow(0.8, dur), t + dur * 0.9)
   g.gain.exponentialRampToValueAtTime(0.0008, t + dur + 1.6)
-  g.connect(out)
+  g.connect(dest)
   for (const [type, mul, vol] of [['triangle', 1, 1], ['sine', 2, 0.18]] as const) {
     const o = c.createOscillator()
     const v = c.createGain()
@@ -71,14 +74,50 @@ function pluck(freq: number, t: number, dur: number) {
   }
 }
 
+/** Give the current tune its own gain, faded in from `t`. */
+function startTrack(t: number, fade: boolean) {
+  const c = ctx!
+  trackGain = c.createGain()
+  trackGain.gain.setValueAtTime(fade ? 0 : 1, t)
+  if (fade) trackGain.gain.linearRampToValueAtTime(1, t + FADE_IN)
+  trackGain.connect(out)
+  idx = 0
+  plays = 0
+  for (const fn of listeners) fn(TRACKS[track].name)
+}
+
+/** Fade the current tune out from `t` and move on to the next one. */
+function advance(t: number) {
+  const old = trackGain!
+  old.gain.setValueAtTime(1, t)
+  old.gain.linearRampToValueAtTime(0, t + FADE_OUT)
+  window.setTimeout(() => old.disconnect(), (t - ctx!.currentTime + FADE_OUT + 1) * 1000)
+  track = (track + 1) % TRACKS.length
+  startTrack(t, true)
+}
+
 function tick() {
   const c = ctx!
   while (next < c.currentTime + 1.2) {
-    const [n, beats] = SONG[idx]
-    const lilt = idx % 3 === 0 ? 0 : 0.015
-    if (n) pluck(NOTES[n], next + lilt, beats * BEAT)
-    next += beats * BEAT
-    idx = (idx + 1) % SONG.length
+    const song = SONGS[track]
+    const beat = 60 / TRACKS[track].bpm
+    const [freq, beats] = song[idx]
+    const last = idx === song.length - 1
+    // The closing rest is a breath between repeats; on the final repeat the
+    // next tune enters there instead, while this one's tail dies away.
+    if (last && freq === null && plays === PLAYS_PER_TRACK - 1) {
+      advance(next)
+      continue
+    }
+    const lilt = idx % TRACKS[track].meter === 0 ? 0 : 0.015
+    if (freq) pluck(trackGain!, freq, next + lilt, beats * beat)
+    next += beats * beat
+    idx++
+    if (idx === song.length) {
+      idx = 0
+      plays++
+      if (plays === PLAYS_PER_TRACK) advance(next)
+    }
   }
 }
 
@@ -90,8 +129,10 @@ export function playMusic() {
   out.gain.setValueAtTime(out.gain.value, c.currentTime)
   out.gain.linearRampToValueAtTime(VOLUME, c.currentTime + 1.5)
   if (timer === undefined) {
-    idx = 0
     next = c.currentTime + 0.1
+    // Resuming after a mute starts the same tune again from the top.
+    trackGain?.disconnect()
+    startTrack(next, false)
     tick()
     timer = window.setInterval(tick, 250)
   }
@@ -104,4 +145,15 @@ export function stopMusic() {
   out.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.8)
   window.clearInterval(timer)
   timer = undefined
+}
+
+/** The tune that is playing (or will play next), e.g. for a tooltip. */
+export function currentTrackName(): string {
+  return TRACKS[track].name
+}
+
+/** Be told whenever a new tune starts. Returns an unsubscribe function. */
+export function onTrackChange(fn: (name: string) => void): () => void {
+  listeners.add(fn)
+  return () => listeners.delete(fn)
 }
