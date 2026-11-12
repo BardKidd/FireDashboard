@@ -28,7 +28,7 @@ const COLORS = {
 const data = computed(() => {
   // Last snapshot of each month, in today's TWD.
   const hist = new Map<string, number>()
-  for (const h of props.history) hist.set(h.date.slice(0, 7), h.total_value_real)
+  for (const h of props.history) hist.set(h.date.slice(0, 7), h.net_value_real)
   let proj = props.projection.series
   if (range.value === '10y') proj = proj.slice(0, 121)
   const months = [...new Set([...hist.keys(), ...proj.map((p) => p.month)])].sort()
@@ -42,6 +42,7 @@ const data = computed(() => {
   }
 })
 
+const hasDebt = computed(() => props.history.some((h) => h.debt_twd > 0.5) || props.projection.series.some((p) => p.debt > 0.5))
 const historyMonths = computed(() => data.value.history.filter((v) => v != null).length)
 const historyStart = computed(() => props.history[0]?.date ?? null)
 
@@ -118,7 +119,7 @@ function option(): echarts.EChartsCoreOption {
               }
             : undefined,
       }),
-      line('歷史真實資產', d.history, COLORS.history, {
+      line(hasDebt.value ? '歷史真實淨值' : '歷史真實資產', d.history, COLORS.history, {
         // With only a few months recorded the line is too short to see, so mark each point.
         showSymbol: historyMonths.value <= 6,
         symbol: 'circle',
@@ -164,7 +165,7 @@ watch(() => [props.projection, props.history, props.timeToCoast, range.value], r
     <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
       <div>
         <h2 class="text-sm font-semibold">Coast FIRE 雙軌預測<InfoTip k="trajectory" /></h2>
-        <p class="text-xs text-ink-400">全部以今日台幣購買力計算；歷史資產已依通膨換算</p>
+        <p class="text-xs text-ink-400">全部以今日台幣購買力計算；歷史資產已依通膨換算<template v-if="hasDebt">；有負債時每條線都是扣掉剩餘本金的淨資產</template></p>
         <p v-if="historyStart && historyMonths <= 2" class="mt-0.5 text-xs text-accent">
           歷史資產從 {{ historyStart }} 開始記錄，每天收盤後會自動多一個點，線會越來越長
         </p>

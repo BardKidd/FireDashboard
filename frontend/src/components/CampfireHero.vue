@@ -24,6 +24,7 @@ const fxLabel = computed(() => {
   const name = { live: '即時', ma200: '200 日均', custom: '自訂' }[fx.mode]
   return fx.used ? name + '匯率 ' + fx.used.toFixed(2) : '尚無匯率'
 })
+const hasDebt = computed(() => props.summary.debt > 0.5)
 const windy = computed(() => (props.summary.day_change_twd ?? 0) < 0)
 
 const headline = computed(() => {
@@ -201,7 +202,7 @@ const sparks = computed(() =>
         stroke-dasharray="4 6"
       />
       <text :x="CX + 40" :y="TARGET_TOP + 8" class="display" :font-size="isMobile ? 23 : 15" fill="#ffd36e">Coast 線 · {{ wan(summary.coast_target) }}</text>
-      <text :x="CX - 40" :y="TARGET_TOP + 8" class="display" :font-size="isMobile ? 23 : 15" fill="#f2e8dc" text-anchor="end">現在 · {{ wan(summary.total_assets) }}</text>
+      <text :x="CX - 40" :y="TARGET_TOP + 8" class="display" :font-size="isMobile ? 23 : 15" fill="#f2e8dc" text-anchor="end">現在 · {{ wan(summary.net_worth) }}</text>
 
       <g v-if="progress > 0" :transform="`translate(${CX} ${BASE_Y}) scale(${flameScale})`">
         <g :class="{ windy }">
@@ -257,12 +258,13 @@ const sparks = computed(() =>
       <p v-if="windy" class="-mt-3 text-sm text-ink-400">今天有點風，火晃得比較大，柴都還在。</p>
       <dl class="grid grid-cols-2 gap-x-6 gap-y-4">
         <div data-tour="assets">
-          <dt class="label">柴堆（總資產）<InfoTip k="assets" /></dt>
-          <dd class="display num mt-1 text-2xl sm:text-3xl text-warm">{{ wan(summary.total_assets) }}</dd>
+          <dt class="label">{{ hasDebt ? '柴堆（淨資產）' : '柴堆（總資產）' }}<InfoTip k="assets" /></dt>
+          <dd class="display num mt-1 text-2xl sm:text-3xl text-warm">{{ wan(summary.net_worth) }}</dd>
           <dd class="mt-1 text-xs text-ink-400">
+            <span v-if="hasDebt" class="block">資產 {{ wan(summary.total_assets) }} − 負債 {{ wan(summary.debt) }}</span>
             {{ fxLabel }}
             <span v-if="summary.fx.mode !== 'live' && summary.fx.live" class="block">
-              以即時匯率 {{ summary.fx.live.toFixed(2) }} 計為 {{ wan(summary.total_assets_live_fx) }}
+              以即時匯率 {{ summary.fx.live.toFixed(2) }} 計為 {{ wan(summary.net_worth_live_fx) }}
             </span>
           </dd>
         </div>

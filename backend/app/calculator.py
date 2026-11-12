@@ -84,8 +84,37 @@ def contribution_at(p: FireParams, t: int) -> float:
 
 # ---------------------------------------------------------------- 5.4 / 5.7 projection
 
-def project(p: FireParams, p0: float, today: date) -> list[dict]:
-    """Month-by-month series from now to retirement (inclusive)."""
+@dataclass(frozen=True)
+class DebtPlan:
+    """Loans as seen by the projection, both nominal TWD, indexed by t (months
+    from the first of today's month): remaining principal, and a paid-off
+    loan's payment that is invested instead."""
+
+    debt: list[float]
+    freed: list[float]
+
+    def debt_at(self, t: int) -> float:
+        return self.debt[min(t, len(self.debt) - 1)] if self.debt else 0.0
+
+    def freed_at(self, t: int) -> float:
+        return self.freed[min(t, len(self.freed) - 1)] if self.freed else 0.0
+
+
+NO_DEBT = DebtPlan([], [])
+
+
+def _deflator(p: FireParams, t: int) -> float:
+    return (1 + p.inflation_rate) ** (t / 12)
+
+
+def project(p: FireParams, p0: float, today: date, debt: DebtPlan = NO_DEBT) -> list[dict]:
+    """Month-by-month series from now to retirement (inclusive).
+
+    p0 is gross assets. Every value line is net worth: assets minus the loans'
+    remaining principal, in today's TWD. Loan payments come out of income, not
+    out of the portfolio, so paying a loan down raises net worth without new
+    contributions; "no_contribution" therefore still includes the repayments.
+    """
     rm = monthly_rate(real_return(p.expected_nominal_return, p.inflation_rate))
     n = months_remaining(p, today)
     target = fire_target(p)
@@ -94,21 +123,23 @@ def project(p: FireParams, p0: float, today: date) -> list[dict]:
     with_c = p0
     for t in range(n + 1):
         if t > 0:
-            with_c = with_c * (1 + rm) + contribution_at(p, t)
+            with_c = with_c * (1 + rm) + contribution_at(p, t) + debt.freed_at(t) / _deflator(p, t)
+        owed = debt.debt_at(t) / _deflator(p, t)
         out.append(
             {
                 "t": t,
                 "month": add_months(start, t).strftime("%Y-%m"),
                 "coast_target": target / (1 + rm) ** (n - t),
-                "no_contribution": p0 * (1 + rm) ** t,
-                "with_contribution": with_c,
+                "no_contribution": p0 * (1 + rm) ** t - owed,
+                "with_contribution": with_c - owed,
+                "debt": owed,
             }
         )
     return out
 
 
-def time_to_coast(p: FireParams, p0: float, today: date) -> dict:
-    series = project(p, p0, today)
+def time_to_coast(p: FireParams, p0: float, today: date, debt: DebtPlan = NO_DEBT) -> dict:
+    series = project(p, p0, today, debt)
     n = len(series) - 1
     for row in series:
         if row["with_contribution"] >= row["coast_target"]:
@@ -143,18 +174,22 @@ def portfolio_beta(values_and_betas: Iterable[tuple[float, float]]) -> float:
     return sum(v * b for v, b in pairs) / total
 
 
-def stress_test(p0: float, coast0: float, beta: float, drop: float) -> dict:
-    progress = p0 / coast0 if coast0 > 0 else None
-    stressed_value = p0 * (1 - drop * beta)
+def stress_test(p0: float, coast0: float, beta: float, drop: float, debt: float = 0.0) -> dict:
+    """p0 is gross assets and beta their beta; debt does not fall with the
+    market, so a drop hits net worth harder than the assets alone."""
+    net = p0 - debt
+    progress = net / coast0 if coast0 > 0 else None
+    stressed_value = p0 * (1 - drop * beta) - debt
     stressed_progress = stressed_value / coast0 if coast0 > 0 else None
-    if p0 <= 0 or coast0 <= 0 or p0 < coast0:
+    if p0 <= 0 or coast0 <= 0 or net < coast0:
         cushion = None  # not yet in the safe zone
     elif beta <= 0:
         cushion = 1.0  # nothing in the portfolio moves with the market
     else:
-        cushion = min(1.0, (1 - coast0 / p0) / beta)
+        cushion = min(1.0, (net - coast0) / (p0 * beta))
     return {
         "beta": beta,
+        "net_beta": p0 * beta / net if net > 0 else None,
         "drop": drop,
         "progress": progress,
         "stressed_value": stressed_value,
@@ -165,10 +200,13 @@ def stress_test(p0: float, coast0: float, beta: float, drop: float) -> dict:
 
 # ---------------------------------------------------------------- summary
 
-def summary(p: FireParams, p0: float, beta: float, today: date) -> dict:
+def summary(p: FireParams, p0: float, beta: float, today: date, debt: DebtPlan = NO_DEBT) -> dict:
+    """p0 is gross assets; progress and everything after it use net worth."""
     n = months_remaining(p, today)
     coast0 = coast_target(p, n)
     rr = real_return(p.expected_nominal_return, p.inflation_rate)
+    owed = debt.debt_at(0)
+    net = p0 - owed
     return {
         "today": today.isoformat(),
         "age_years": age_in_months(p, today) / 12,
@@ -177,10 +215,12 @@ def summary(p: FireParams, p0: float, beta: float, today: date) -> dict:
         "fire_target": fire_target(p),
         "coast_target": coast0,
         "total_assets": p0,
-        "progress": p0 / coast0 if coast0 > 0 else None,
-        "time_to_coast": time_to_coast(p, p0, today),
-        "monthly_income_if_stop": monthly_income_if_stop(p, p0, today),
-        "stress": stress_test(p0, coast0, beta, p.stress_drop),
+        "debt": owed,
+        "net_worth": net,
+        "progress": net / coast0 if coast0 > 0 else None,
+        "time_to_coast": time_to_coast(p, p0, today, debt),
+        "monthly_income_if_stop": monthly_income_if_stop(p, net, today),
+        "stress": stress_test(p0, coast0, beta, p.stress_drop, owed),
     }
 
 
