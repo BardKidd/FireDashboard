@@ -61,6 +61,8 @@ cp .env.example .env
 
 照 [docs/deploy-oracle.md](docs/deploy-oracle.md) 部署到 Oracle Cloud 免費主機，用 Cloudflare Tunnel 開一個 https 子網址，並用 Cloudflare Access 加上 email 驗證碼登入。整個過程不用開任何對外的埠。
 
+想用 Google Cloud 的永久免費主機（e2-micro）就照 [docs/deploy-gcp.md](docs/deploy-gcp.md)，Cloudflare 那段設定相同。
+
 ---
 
 ## 日常維護
