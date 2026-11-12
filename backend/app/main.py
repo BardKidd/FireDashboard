@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from . import calculator, contracts, database, fetcher, game, ledger, seed
+from . import calculator, contracts, database, fetcher, game, ledger, loans, seed
 from .database import get_db, write_lock
 from .models import (
     CASH_SYMBOLS,
@@ -23,6 +23,7 @@ from .models import (
     FetchStatus,
     FixedContract,
     Holding,
+    Loan,
     PortfolioSnapshot,
     PriceHistory,
     Redemption,
@@ -88,6 +89,15 @@ def _rebuild(db: Session) -> None:
         raise HTTPException(400, str(exc)) from exc
 
 
+def _all_loans(db: Session) -> list[Loan]:
+    return list(db.scalars(select(Loan).order_by(Loan.id)))
+
+
+def _debt_plan(db: Session, params: calculator.FireParams, today: date) -> calculator.DebtPlan:
+    debt, freed = loans.plan(_all_loans(db), today, calculator.months_remaining(params, today))
+    return calculator.DebtPlan(debt, freed)
+
+
 def _summary(db: Session) -> dict:
     cfg = get_config(db)
     pos = ledger.position_rows(db, cfg)
@@ -95,9 +105,10 @@ def _summary(db: Session) -> dict:
     pairs = [(r["value_twd"] or 0, r["stress_beta"]) for r in pos["rows"]]
     beta = calculator.portfolio_beta(pairs)
     today = ledger.today_tw()
-    s = calculator.summary(params, pos["total_twd"], beta, today)
+    s = calculator.summary(params, pos["total_twd"], beta, today, _debt_plan(db, params, today))
     live_total = sum(r["live_value_twd"] or 0 for r in pos["rows"])
     s["total_assets_live_fx"] = live_total
+    s["net_worth_live_fx"] = live_total - s["debt"]
     s["fx"] = pos["fx"]
     last = db.scalar(select(PortfolioSnapshot).order_by(PortfolioSnapshot.date.desc()))
     prev = None
@@ -427,6 +438,69 @@ def delete_contract(cid: int, db: Session = Depends(get_db)):
     return {"ok": True}
 
 
+# ------------------------------------------------------------------ loans
+
+class LoanIn(BaseModel):
+    name: str = Field(min_length=1)
+    start_date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
+    principal: float = Field(gt=0)
+    annual_rate: float = Field(ge=0, lt=1)
+    term_months: int = Field(gt=0, le=600)
+    payment: float | None = Field(default=None, gt=0)
+    redirect_after: bool = True
+    closed: bool = False
+    note: str | None = None
+
+
+def _check_loan(body: LoanIn) -> None:
+    try:
+        date.fromisoformat(body.start_date)
+    except ValueError as exc:
+        raise HTTPException(400, "撥款日期格式不對") from exc
+    if body.payment is not None and body.payment <= body.principal * body.annual_rate / 12:
+        raise HTTPException(400, "月付金比每月利息還少，這樣永遠還不完，請再確認一次")
+
+
+@app.get("/api/loans")
+def list_loans(db: Session = Depends(get_db)):
+    today = ledger.today_tw()
+    return [loans.info(l, today) for l in _all_loans(db)]
+
+
+@app.post("/api/loans", status_code=201)
+def create_loan(body: LoanIn, db: Session = Depends(get_db)):
+    _check_loan(body)
+    with write_lock:
+        l = Loan(**body.model_dump())
+        db.add(l)
+        db.commit()
+        return loans.info(l, ledger.today_tw())
+
+
+@app.put("/api/loans/{lid}")
+def update_loan(lid: int, body: LoanIn, db: Session = Depends(get_db)):
+    _check_loan(body)
+    with write_lock:
+        l = db.get(Loan, lid)
+        if l is None:
+            raise HTTPException(404, "找不到這筆負債")
+        for k, v in body.model_dump().items():
+            setattr(l, k, v)
+        db.commit()
+        return loans.info(l, ledger.today_tw())
+
+
+@app.delete("/api/loans/{lid}")
+def delete_loan(lid: int, db: Session = Depends(get_db)):
+    with write_lock:
+        l = db.get(Loan, lid)
+        if l is None:
+            raise HTTPException(404, "找不到這筆負債")
+        db.delete(l)
+        db.commit()
+    return {"ok": True}
+
+
 # ------------------------------------------------------------------ import
 
 @app.post("/api/import")
@@ -458,7 +532,7 @@ def get_projection(db: Session = Depends(get_db)):
     return {
         "today": today.isoformat(),
         "fire_target": calculator.fire_target(params),
-        "series": calculator.project(params, pos["total_twd"], today),
+        "series": calculator.project(params, pos["total_twd"], today, _debt_plan(db, params, today)),
     }
 
 
@@ -467,14 +541,19 @@ def get_history(db: Session = Depends(get_db)):
     """Daily snapshots, nominal and in today's TWD."""
     cfg = get_config(db)
     today = ledger.today_tw()
+    all_loans = _all_loans(db)
     out = []
     for s in db.scalars(select(PortfolioSnapshot).order_by(PortfolioSnapshot.date)):
         d = date.fromisoformat(s.date)
+        owed = loans.total_on(all_loans, d)
         out.append(
             {
                 "date": s.date,
                 "total_value_twd": s.total_value_twd,
                 "total_value_real": calculator.deflate(s.total_value_twd, cfg.inflation_rate, d, today),
+                "debt_twd": owed,
+                "net_value_twd": s.total_value_twd - owed,
+                "net_value_real": calculator.deflate(s.total_value_twd - owed, cfg.inflation_rate, d, today),
                 "total_value_usd": s.total_value_usd,
                 "cash_twd": s.cash_twd,
                 "fx_rate": s.fx_rate,

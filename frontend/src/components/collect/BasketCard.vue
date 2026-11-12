@@ -43,7 +43,7 @@ const dash = computed(() => C * Math.min(1, p.value))
       </svg>
       <div>
         <p class="num text-3xl font-semibold tracking-tight">{{ collect.basket_progress == null ? '—' : pct(collect.basket_progress) }}</p>
-        <p class="text-xs text-ink-400">{{ collect.basket_goal === 'coast' ? 'Coast 目標' : 'FIRE 目標' }} {{ wan(collect.goal_amount) }}</p>
+        <p class="text-xs text-ink-400">{{ collect.basket_goal === 'coast' ? 'Coast 目標' : 'FIRE 目標' }} {{ wan(collect.goal_amount) }}<template v-if="collect.debt > 0">＋待還負債 {{ wan(collect.debt) }}</template></p>
         <p v-if="p >= 1 && collect.basket_goal === 'coast'" class="mt-2 text-xs text-accent">Coast 籃子集滿了，可以換成 FIRE 籃子繼續收集。</p>
         <p v-else-if="collect.basket_progress == null" class="mt-2 text-xs text-ink-400">等報價更新後就能算出目標股數。</p>
       </div>

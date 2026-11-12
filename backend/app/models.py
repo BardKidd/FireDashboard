@@ -165,6 +165,26 @@ class FixedContract(Base):
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
+class Loan(Base):
+    """An amortising loan, e.g. a personal loan whose money went into the
+    portfolio. Its remaining principal is subtracted from net worth."""
+
+    __tablename__ = "loans"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(100))
+    start_date: Mapped[str] = mapped_column(String(10))  # YYYY-MM-DD the money arrived
+    principal: Mapped[float] = mapped_column(Float)
+    annual_rate: Mapped[float] = mapped_column(Float)  # 0.03 = 3 %
+    term_months: Mapped[int] = mapped_column(Integer)
+    # Monthly payment from the bank statement; None = standard annuity payment.
+    payment: Mapped[float | None] = mapped_column(Float, nullable=True)
+    # After payoff, keep investing the same amount every month.
+    redirect_after: Mapped[bool] = mapped_column(Boolean, default=True)
+    closed: Mapped[bool] = mapped_column(Boolean, default=False)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
 class Checkin(Base):
     """Phase 2: one row per Taiwan date the user checked in."""
 

@@ -75,6 +75,7 @@ async function save() {
         <label class="grid gap-1">
           <span class="label">每月定期定額（台幣）</span>
           <input v-model.number="form.monthly_contribution_twd" type="number" min="0" step="any" required class="input num" />
+          <span class="text-xs text-ink-400">只填新投入的錢。貸款月付金不要算進來，在「負債」裡設定還清後轉為投入即可</span>
         </label>
         <label class="flex items-center gap-2 self-end pb-2 text-sm text-ink-300">
           <input v-model="form.contribution_indexed" type="checkbox" class="accent-[var(--color-accent)]" />

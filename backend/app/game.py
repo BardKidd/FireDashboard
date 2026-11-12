@@ -25,13 +25,14 @@ from datetime import date, timedelta
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from . import calculator, ledger
+from . import calculator, ledger, loans
 from .models import (
     Achievement,
     Checkin,
     Dividend,
     GameSettings,
     Holding,
+    Loan,
     PortfolioSnapshot,
     Redemption,
     Reward,
@@ -225,10 +226,12 @@ def _candidates(db: Session) -> list[Achievement]:
             )
 
     reached: set[int] = set()
+    all_loans = list(db.scalars(select(Loan)))
     for s in db.scalars(select(PortfolioSnapshot).order_by(PortfolioSnapshot.date)):
         if not s.coast_target_twd:
             continue
-        pct = s.total_value_twd / s.coast_target_twd * 100
+        net = s.total_value_twd - loans.total_on(all_loans, date.fromisoformat(s.date))
+        pct = net / s.coast_target_twd * 100
         for step in COAST_STEPS:
             if step not in reached and pct >= step:
                 reached.add(step)
@@ -405,6 +408,9 @@ def collect_view(db: Session, today: date | None = None) -> dict:
     coast0 = calculator.coast_target(params, calculator.months_remaining(params, today))
     fire = calculator.fire_target(params)
     goal = fire if settings.basket_goal == "fire" else coast0
+    # Loans are paid back out of these holdings' net worth, so the basket has
+    # to hold the goal plus what is still owed.
+    debt = loans.total_on(list(db.scalars(select(Loan))), today)
     fx = pos["fx"]["used"]
     total = pos["total_twd"]
     holdings_by_sym = {h.symbol: h for h in db.scalars(select(Holding))}
@@ -434,7 +440,7 @@ def collect_view(db: Session, today: date | None = None) -> dict:
         rate = fx if r["currency"] == "USD" else 1.0
         base_twd = base * rate if base and rate else None
         weight = (r["value_twd"] or 0) / total if total > 0 else 0
-        auto_target = goal * weight / base_twd if base_twd and weight > 0 else None
+        auto_target = (goal + debt) * weight / base_twd if base_twd and weight > 0 else None
         target = h.target_shares or auto_target
         target_progress = shares_now / target if target else None
         if target and base_twd:
@@ -473,6 +479,7 @@ def collect_view(db: Session, today: date | None = None) -> dict:
         "today": today.isoformat(),
         "basket_goal": settings.basket_goal,
         "goal_amount": goal,
+        "debt": debt,
         "coast_target": coast0,
         "fire_target": fire,
         "basket_progress": basket_have / basket_need if basket_need else None,

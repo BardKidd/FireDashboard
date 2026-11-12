@@ -79,6 +79,33 @@ export interface ContractInfo extends ContractInput {
   implied_annual_rate: number
 }
 
+export interface LoanInput {
+  name: string
+  start_date: string
+  principal: number
+  annual_rate: number
+  term_months: number
+  payment: number | null
+  redirect_after: boolean
+  closed: boolean
+  note: string | null
+}
+
+export interface LoanInfo extends LoanInput {
+  id: number
+  monthly_payment: number
+  paid_months: number
+  payoff_months: number
+  balance: number
+  repaid_principal: number
+  total_interest: number
+  next_interest: number
+  next_principal: number
+  first_payment_month: string
+  payoff_month: string
+  paid_off: boolean
+}
+
 export interface Holdings {
   fx: FxInfo
   rows: Position[]
@@ -102,11 +129,15 @@ export interface Summary {
   coast_target: number
   total_assets: number
   total_assets_live_fx: number
+  debt: number
+  net_worth: number
+  net_worth_live_fx: number
   progress: number | null
   time_to_coast: TimeToCoast
   monthly_income_if_stop: number
   stress: {
     beta: number
+    net_beta: number | null
     drop: number
     progress: number | null
     stressed_value: number
@@ -124,6 +155,7 @@ export interface ProjectionPoint {
   coast_target: number
   no_contribution: number
   with_contribution: number
+  debt: number
 }
 
 export interface Projection {
@@ -136,6 +168,9 @@ export interface HistoryPoint {
   date: string
   total_value_twd: number
   total_value_real: number
+  debt_twd: number
+  net_value_twd: number
+  net_value_real: number
   total_value_usd: number
   cash_twd: number
   fx_rate: number | null
@@ -233,6 +268,7 @@ export interface Collect {
   today: string
   basket_goal: BasketGoal
   goal_amount: number
+  debt: number
   coast_target: number
   fire_target: number
   basket_progress: number | null
@@ -390,6 +426,10 @@ export const api = {
   addContract: (b: ContractInput) => request<ContractInfo>('/contracts', json('POST', b)),
   updateContract: (id: number, b: ContractInput) => request<ContractInfo>('/contracts/' + id, json('PUT', b)),
   deleteContract: (id: number) => request<{ ok: boolean }>('/contracts/' + id, { method: 'DELETE' }),
+  loans: () => request<LoanInfo[]>('/loans'),
+  addLoan: (b: LoanInput) => request<LoanInfo>('/loans', json('POST', b)),
+  updateLoan: (id: number, b: LoanInput) => request<LoanInfo>('/loans/' + id, json('PUT', b)),
+  deleteLoan: (id: number) => request<{ ok: boolean }>('/loans/' + id, { method: 'DELETE' }),
   refresh: () => request<{ started: boolean }>('/refresh', { method: 'POST' }),
   collect: () => request<Collect>('/collect'),
   game: () => request<Game>('/game'),

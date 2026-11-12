@@ -5,7 +5,7 @@ import { money, pct, price, shares, wan } from '../format'
 import InfoTip from '../guide/InfoTip.vue'
 
 const props = defineProps<{ holdings: Holdings }>()
-const emit = defineEmits<{ record: [p: Position]; edit: [p: Position]; add: []; addContract: [] }>()
+const emit = defineEmits<{ record: [p: Position]; edit: [p: Position]; add: []; addContract: []; addLoan: [] }>()
 
 const showPnl = ref(false)
 const showArchived = ref(false)
@@ -35,6 +35,7 @@ const named = (r: Position) => r.market === 'CASH' || r.market === 'CONTRACT'
           <input v-model="showArchived" type="checkbox" class="accent-[var(--color-accent)]" /> 顯示已封存（{{ archivedCount }}）
         </label>
         <button class="btn-ghost" @click="emit('addContract')">＋ 約定存款</button>
+        <button class="btn-ghost" @click="emit('addLoan')">＋ 負債</button>
         <button class="btn-primary" @click="emit('add')">
           <svg viewBox="0 0 20 20" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 4v12M4 10h12" /></svg>
           新增標的

@@ -7,6 +7,7 @@ import {
   type DividendRow,
   type HistoryPoint,
   type Holdings,
+  type LoanInfo,
   type Position,
   type Projection,
   type Status,
@@ -18,6 +19,8 @@ import ContractDialog from './components/ContractDialog.vue'
 import DividendsCard from './components/DividendsCard.vue'
 import HoldingEditDialog from './components/HoldingEditDialog.vue'
 import HoldingsTable from './components/HoldingsTable.vue'
+import LoanDialog from './components/LoanDialog.vue'
+import LoansCard from './components/LoansCard.vue'
 import ShareLogDialog from './components/ShareLogDialog.vue'
 import StressCard from './components/StressCard.vue'
 import CampfireHero from './components/CampfireHero.vue'
@@ -88,6 +91,7 @@ const holdings = ref<Holdings>()
 const projection = ref<Projection>()
 const history = ref<HistoryPoint[]>([])
 const dividends = ref<DividendRow[]>([])
+const loans = ref<LoanInfo[]>([])
 const config = ref<Config>()
 const status = ref<Status>()
 const loadError = ref('')
@@ -97,6 +101,7 @@ const showAdd = ref(false)
 const recordFor = ref<Position | null>(null)
 const editFor = ref<Position | null>(null)
 const contractFor = ref<ContractInfo | 'new' | null>(null)
+const loanFor = ref<LoanInfo | 'new' | null>(null)
 const showQuick = ref(false)
 
 function onEdit(p: Position) {
@@ -120,7 +125,7 @@ function quickPick(p: Position) {
 
 async function loadAll() {
   try {
-    const [s, h, p, hi, d, c, st] = await Promise.all([
+    const [s, h, p, hi, d, c, st, lo] = await Promise.all([
       api.summary(),
       api.holdings(),
       api.projection(),
@@ -128,6 +133,7 @@ async function loadAll() {
       api.dividends(),
       api.config(),
       api.status(),
+      api.loans(),
     ])
     summary.value = s
     holdings.value = h
@@ -136,6 +142,7 @@ async function loadAll() {
     dividends.value = d
     config.value = c
     status.value = st
+    loans.value = lo
     loadError.value = ''
   } catch (e) {
     loadError.value = (e as Error).message
@@ -321,8 +328,17 @@ const errorDetail = computed(() =>
         :holdings="holdings"
         @add="showAdd = true"
         @add-contract="contractFor = 'new'"
+        @add-loan="loanFor = 'new'"
         @record="recordFor = $event"
         @edit="onEdit"
+      />
+      <LoansCard
+        v-if="shows('logs') && loans.length"
+        data-tour="loans"
+        :loans="loans"
+        :total-assets="holdings.total_twd"
+        @add="loanFor = 'new'"
+        @edit="loanFor = $event"
       />
       <DividendsCard v-if="shows('logs')" data-tour="dividends" :dividends="dividends" />
     </div>
@@ -355,6 +371,12 @@ const errorDetail = computed(() =>
       v-if="contractFor"
       :contract="contractFor === 'new' ? undefined : contractFor"
       @close="contractFor = null"
+      @changed="loadAll"
+    />
+    <LoanDialog
+      v-if="loanFor"
+      :loan="loanFor === 'new' ? undefined : loanFor"
+      @close="loanFor = null"
       @changed="loadAll"
     />
     <HoldingEditDialog v-if="editFor" :position="editFor" @close="editFor = null" @changed="loadAll" />
