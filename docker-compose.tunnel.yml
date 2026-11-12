@@ -7,6 +7,29 @@ services:
     restart: unless-stopped
     depends_on:
       - frontend
-    command: tunnel --no-autoupdate run
+    # --metrics opens a local status page inside the container; the healthcheck asks it
+    # whether the tunnel still has a live connection to Cloudflare.
+    command: tunnel --no-autoupdate --metrics 0.0.0.0:20241 run
     environment:
       - TUNNEL_TOKEN=${CF_TUNNEL_TOKEN:?set CF_TUNNEL_TOKEN in .env}
+    healthcheck:
+      test: ["CMD", "cloudflared", "tunnel", "--metrics", "localhost:20241", "ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Restarts cloudflared after the machine wakes from sleep, or whenever the
+  # healthcheck above says the tunnel is down. See tunnel-watchdog/watchdog.sh.
+  tunnel-watchdog:
+    image: docker:27-cli
+    restart: unless-stopped
+    depends_on:
+      - cloudflared
+    entrypoint: ["sh", "/watchdog.sh"]
+    environment:
+      # POSIX form, because this small image has no timezone database.
+      - TZ=CST-8
+    volumes:
+      - ./tunnel-watchdog/watchdog.sh:/watchdog.sh:ro
+      - /var/run/docker.sock:/var/run/docker.sock
