@@ -237,6 +237,28 @@ docker compose logs cloudflared | tail
 
 token 如果不小心外流（例如貼到聊天裡），到 Tunnel 頁面按 **Rotate token**，把新的貼進 `.env` 的 `CF_TUNNEL_TOKEN`，再執行 `docker compose up -d`。
 
+### 主機睡眠後自動重連
+
+主機睡眠或 VM 被暫停再醒來時，容器都還顯示 Up，但 tunnel 的連線其實已經斷了，外面會連不進來。開了 tunnel 之後會多一個 `tunnel-watchdog` 小容器自動處理這件事，不用另外設定：
+
+- 它發現時間一下跳了一大段（代表整台機器剛睡過），等 5 秒讓網路恢復，就重新啟動 cloudflared。
+- cloudflared 自己的健康檢查連續失敗（約 1.5 分鐘連不上 Cloudflare）時，也會重新啟動它。
+
+想看它做過什麼：
+
+```bash
+docker compose logs tunnel-watchdog | tail
+```
+
+醒來後看到 `clock jumped ...` 和 `cloudflared restarted` 就是它自動重連了。想不睡覺先測試，可以把它暫停一分半再恢復，效果和主機睡眠一樣：
+
+```bash
+docker compose pause tunnel-watchdog && sleep 90 && docker compose unpause tunnel-watchdog
+sleep 20 && docker compose logs tunnel-watchdog | tail -3
+```
+
+它需要讀寫 `/var/run/docker.sock` 才能重啟 cloudflared，只會動同一個 compose 專案裡的 cloudflared。
+
 ---
 
 ## 10. 手機加到主畫面
