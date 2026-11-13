@@ -205,15 +205,22 @@ def _start_for(need_from: str | None) -> date:
     return start
 
 
+def tracked_symbols(db: Session) -> list[str]:
+    """Symbols the scheduled refresh keeps up to date: every non-cash holding
+    still held (or not archived), plus the FX rate. Sold-and-archived holdings
+    are left out, so their frozen fetch status must not count as stale."""
+    holdings = db.scalars(select(Holding).where(Holding.market != "CASH"))
+    syms = [h.symbol for h in holdings if not h.archived or h.shares > 0]
+    return list(dict.fromkeys([*syms, FX_SYMBOL]))
+
+
 def refresh(symbols: list[str] | None = None) -> dict:
     """Fetch new data for all (or given) symbols, then rebuild derived tables."""
     results: dict[str, str] = {}
     with write_lock, SessionLocal() as db:
         from .models import ShareLog
 
-        holdings = list(db.scalars(select(Holding).where(Holding.market != "CASH")))
-        targets = symbols or [h.symbol for h in holdings if not h.archived or h.shares > 0]
-        targets = list(dict.fromkeys([*targets, FX_SYMBOL]))
+        targets = list(dict.fromkeys([*symbols, FX_SYMBOL])) if symbols else tracked_symbols(db)
         first_log = {
             s: d
             for s, d in db.execute(
