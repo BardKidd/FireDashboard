@@ -579,7 +579,12 @@ def list_dividends(db: Session = Depends(get_db)):
 
 @app.get("/api/status")
 def get_status(db: Session = Depends(get_db)):
-    rows = list(db.scalars(select(FetchStatus).order_by(FetchStatus.symbol)))
+    # Only symbols that are still refreshed: a sold, archived holding keeps its
+    # last status forever and would otherwise pin the date in the past.
+    tracked = fetcher.tracked_symbols(db)
+    rows = list(db.scalars(
+        select(FetchStatus).where(FetchStatus.symbol.in_(tracked)).order_by(FetchStatus.symbol)
+    ))
     ok_dates = [r.last_success_date for r in rows if r.last_success_date]
     return {
         "refreshing": _refresh_state["running"],

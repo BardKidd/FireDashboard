@@ -39,3 +39,21 @@ def test_game_endpoints(client):
     assert client.delete(f"/api/game/redemptions/{g['redemptions'][0]['id']}").status_code == 200
     assert client.put("/api/game/settings", json={"theme": "gold"}).status_code == 400
     assert client.get("/api/collect").json()["holdings"] == []
+
+
+def test_status_ignores_sold_archived_holdings(client, db):
+    from app.models import FetchStatus
+
+    client.post("/api/holdings", json={"symbol": "QLD", "shares": 10, "date": "2025-06-02"})
+    client.post("/api/holdings", json={"symbol": "SSO", "shares": 5, "date": "2025-06-02"})
+    assert client.post("/api/logs", json={"symbol": "QLD", "date": "2025-07-01", "kind": "sell", "delta": -10}).status_code == 201
+    assert client.delete("/api/holdings/QLD").json() == {"archived": True}
+    db.add_all([
+        FetchStatus(symbol="QLD", last_success_date="2025-07-01"),  # frozen since the sale
+        FetchStatus(symbol="SSO", last_success_date="2025-07-10"),
+        FetchStatus(symbol="USDTWD=X", last_success_date="2025-07-10"),
+    ])
+    db.commit()
+    st = client.get("/api/status").json()
+    assert st["last_success_date"] == "2025-07-10"
+    assert "QLD" not in [r["symbol"] for r in st["symbols"]]
