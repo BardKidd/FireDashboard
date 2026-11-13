@@ -165,7 +165,7 @@ GitHub 第一次建好 image 時，預設是 Private，主機沒登入就拉不�
 cd ~/FireDashboard && git pull && bash deploy/install-auto-deploy.sh
 ```
 
-會建立 `fire-auto-deploy.timer`（開機 2 分鐘後開始，之後每 5 分鐘一次），並立刻跑一次。
+會先下載 GitHub 建好的 image 並重開容器，再建立 `fire-auto-deploy.timer`（開機 2 分鐘後開始，之後每 5 分鐘一次）。
 
 看紀錄：`sudo journalctl -u fire-auto-deploy -n 30 --no-pager`
 暫停自動更新：`sudo systemctl disable --now fire-auto-deploy.timer`

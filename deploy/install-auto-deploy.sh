@@ -30,6 +30,10 @@ OnUnitActiveSec=5min
 WantedBy=timers.target
 UNIT
 
+# The timer only reacts to new commits, so switch to the prebuilt images once
+# now (otherwise a server that just ran `git pull` keeps its old local build).
+(cd "$repo" && docker compose pull -q backend frontend && docker compose up -d)
+
 sudo systemctl daemon-reload
 sudo systemctl enable --now fire-auto-deploy.timer
 echo "已安裝。立刻跑一次："
