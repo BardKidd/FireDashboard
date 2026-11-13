@@ -64,6 +64,10 @@ function option(): echarts.EChartsCoreOption {
     lineStyle: { color, width: 2 },
     itemStyle: { color },
     emphasis: { focus: 'series' },
+    // Hovering a legend item blurs the other lines; after a click hides the hovered
+    // line, they stayed blurred (on phones a tap never un-hovers), so it looked like
+    // every line was cleared. Keep legend clicks a pure show/hide toggle.
+    legendHoverLink: false,
     ...extra,
   })
   return {
@@ -76,6 +80,10 @@ function option(): echarts.EChartsCoreOption {
       icon: 'roundRect',
       itemWidth: 14,
       itemHeight: 4,
+      // Default inactive grey (#ccc) is brighter than active text on this dark theme,
+      // so a hidden series looked "on". Dim it instead.
+      inactiveColor: '#57473b',
+      inactiveBorderColor: '#57473b',
       textStyle: { color: '#cdbcae', fontSize: narrow ? 11 : 12 },
     },
     tooltip: {
