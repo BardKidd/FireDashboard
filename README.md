@@ -69,7 +69,7 @@ cp .env.example .env
 
 | 想做的事 | 指令 |
 | --- | --- |
-| 更新到最新版 | `git pull && docker compose up -d --build` |
+| 更新到最新版 | `git pull && docker compose pull && docker compose up -d`（自己改了程式碼就用 `docker compose up -d --build`；GCP 主機可以設成自動更新，見 [docs/deploy-gcp.md](docs/deploy-gcp.md) 第 8 節） |
 | 停止 | `docker compose down` |
 | 再次啟動 | `docker compose up -d` |
 | 看後端在做什麼 | `docker compose logs -f backend` |

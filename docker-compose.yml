@@ -1,5 +1,8 @@
 services:
   backend:
+    # Prebuilt by GitHub Actions on every push to main; `docker compose build`
+    # still builds it locally under the same name.
+    image: ghcr.io/bardkidd/firedashboard-backend:latest
     build: ./backend
     restart: unless-stopped
     environment:
@@ -8,6 +11,7 @@ services:
       - ./data:/data
 
   frontend:
+    image: ghcr.io/bardkidd/firedashboard-frontend:latest
     build: ./frontend
     restart: unless-stopped
     depends_on:
