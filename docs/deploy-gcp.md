@@ -145,13 +145,41 @@ cd ~/FireDashboard && docker compose up -d && sleep 45 && docker compose ps
 
 確認沒問題後，舊主機**不要再** `docker compose up`。舊的 `fire.db` 可以留著當備份。
 
+## 8. 自動更新（合併到 main 後自動部署）
+
+GitHub 上每次有新的 commit 進到 main，GitHub Actions（`.github/workflows/images.yml`）會先跑後端測試，通過後把 backend、frontend 兩個 image 建好，放到 GitHub Container Registry（`ghcr.io/bardkidd/firedashboard-backend`、`-frontend`）。主機每 5 分鐘檢查一次，有新版而且那個 commit 的 image 已經建好，就自動 `git pull`、下載 image、重開容器。
+
+- 主機不用自己 build（原本要 10～20 分鐘、吃滿記憶體），更新只要下載，一兩分鐘。
+- 主機不需要開任何埠給 GitHub，GitHub 也不用存主機的金鑰，是主機自己去拉。
+- 測試沒過時 image 不會產生，主機就停在舊版。
+
+### 8.1 把 image 設成 Public（只要做一次）
+
+GitHub 第一次建好 image 時，預設是 Private，主機沒登入就拉不到。到 GitHub 個人頁面的 **Packages** 分頁，分別點 `firedashboard-backend` 和 `firedashboard-frontend` → 右邊 **Package settings** → 最下面 **Change visibility** → **Public**。
+
+程式碼本來就是公開的，image 裡只有程式，不含 `data/` 和 `.env`。
+
+### 8.2 在主機上安裝自動更新
+
+```bash
+cd ~/FireDashboard && git pull && bash deploy/install-auto-deploy.sh
+```
+
+會建立 `fire-auto-deploy.timer`（開機 2 分鐘後開始，之後每 5 分鐘一次），並立刻跑一次。
+
+看紀錄：`sudo journalctl -u fire-auto-deploy -n 30 --no-pager`
+暫停自動更新：`sudo systemctl disable --now fire-auto-deploy.timer`
+
+主機上不要直接改 repo 裡的檔案，不然 `git merge --ff-only` 會失敗，自動更新會卡住（紀錄裡會看到錯誤）。
+
 ---
 
 ## 日常維護
 
 | 想做的事 | 在 SSH 視窗執行 |
 | --- | --- |
-| 更新到最新版 | `cd ~/FireDashboard && git pull && docker compose up -d --build`（build 要 10 分鐘以上） |
+| 更新到最新版 | 裝了第 8 節的自動更新就不用管；手動更新用 `bash ~/FireDashboard/deploy/auto-deploy.sh` |
+| 看自動更新紀錄 | `sudo journalctl -u fire-auto-deploy -n 30 --no-pager` |
 | 看 tunnel 狀態 | `docker compose ps`、`docker compose logs tunnel-watchdog \| tail` |
 | 備份資料到自己電腦 | SSH 視窗右上角 **DOWNLOAD FILE**，路徑填 `/home/你的帳號/FireDashboard/data/fire.db` |
 
