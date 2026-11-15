@@ -14,7 +14,17 @@ const props = defineProps<{ projection: Projection; history: HistoryPoint[]; tim
 
 const el = ref<HTMLDivElement>()
 const chart = shallowRef<echarts.ECharts>()
-const range = ref<'10y' | 'all'>('all')
+// Zoom presets in years (0 = all the way to retirement). Only presets shorter
+// than the full projection are offered, so none duplicates "到退休".
+const RANGES = [1, 3, 5, 10, 20, 30] as const
+const range = ref<number>(0)
+const rangeOptions = computed(() => {
+  const total = props.projection.series.length - 1
+  return [...RANGES.filter((y) => y * 12 < total).map((y) => ({ k: y, t: `${y} 年` })), { k: 0, t: '到退休' }]
+})
+watch(rangeOptions, (opts) => {
+  if (!opts.some((o) => o.k === range.value)) range.value = 0
+})
 
 const COLORS = {
   history: '#f59e4b',
@@ -30,7 +40,7 @@ const data = computed(() => {
   const hist = new Map<string, number>()
   for (const h of props.history) hist.set(h.date.slice(0, 7), h.net_value_real)
   let proj = props.projection.series
-  if (range.value === '10y') proj = proj.slice(0, 121)
+  if (range.value > 0) proj = proj.slice(0, range.value * 12 + 1)
   const months = [...new Set([...hist.keys(), ...proj.map((p) => p.month)])].sort()
   const byMonth = new Map(proj.map((p) => [p.month, p]))
   return {
@@ -55,6 +65,10 @@ function option(): echarts.EChartsCoreOption {
   const firstYear = Number(d.months[0]?.slice(0, 4) ?? 0)
   const years = Number(d.months[d.months.length - 1]?.slice(0, 4) ?? 0) - firstYear + 1
   const yearStep = Math.max(1, Math.ceil(years / (narrow ? 5 : 10)))
+  // Short spans (1-3 years) have too few January ticks, so label by month instead.
+  const span = d.months.length
+  const monthStep = span <= 18 ? (narrow ? 3 : 2) : span <= 42 ? (narrow ? 6 : 3) : 0
+  const monthOf = (v: string) => Number(v.slice(5, 7))
   const line = (name: string, values: (number | null)[], color: string, extra: object = {}) => ({
     name,
     type: 'line',
@@ -102,8 +116,11 @@ function option(): echarts.EChartsCoreOption {
       axisTick: { show: false },
       axisLabel: {
         color: COLORS.axis,
-        interval: (_: number, v: string) => v.endsWith('-01') && (Number(v.slice(0, 4)) - firstYear) % yearStep === 0,
-        formatter: (v: string) => v.slice(0, 4),
+        interval: (_: number, v: string) =>
+          monthStep
+            ? (monthOf(v) - 1) % monthStep === 0
+            : v.endsWith('-01') && (Number(v.slice(0, 4)) - firstYear) % yearStep === 0,
+        formatter: (v: string) => (monthStep ? (v.endsWith('-01') ? v.slice(0, 4) : `${monthOf(v)}月`) : v.slice(0, 4)),
         hideOverlap: true,
       },
     },
@@ -178,12 +195,13 @@ watch(() => [props.projection, props.history, props.timeToCoast, range.value], r
           歷史資產從 {{ historyStart }} 開始記錄，每天收盤後會自動多一個點，線會越來越長
         </p>
       </div>
-      <div class="flex rounded-lg border border-ink-700 p-0.5 text-xs" role="group" aria-label="時間範圍">
+      <div class="flex max-w-full overflow-x-auto rounded-lg border border-ink-700 p-0.5 text-xs" role="group" aria-label="時間範圍">
         <button
-          v-for="opt in [{ k: '10y', t: '未來 10 年' }, { k: 'all', t: '到退休' }] as const"
+          v-for="opt in rangeOptions"
           :key="opt.k"
-          class="rounded-md px-2.5 py-1"
+          class="shrink-0 whitespace-nowrap rounded-md px-2 py-1 sm:px-2.5"
           :class="range === opt.k ? 'bg-ink-700 text-ink-100' : 'text-ink-400 hover:text-ink-100'"
+          :aria-pressed="range === opt.k"
           @click="range = opt.k"
         >
           {{ opt.t }}
