@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import * as echarts from 'echarts/core'
 import { LineChart } from 'echarts/charts'
 import { GridComponent, LegendComponent, MarkLineComponent, MarkPointComponent, TooltipComponent } from 'echarts/components'
@@ -14,6 +14,13 @@ const props = defineProps<{ projection: Projection; history: HistoryPoint[]; tim
 
 const el = ref<HTMLDivElement>()
 const chart = shallowRef<echarts.ECharts>()
+// Phones: tapping the chart opens a full-screen copy turned sideways, so the
+// time axis gets the long edge of the screen.
+const narrowCard = ref(false)
+const expanded = ref(false)
+const bigEl = ref<HTMLDivElement>()
+const bigChart = shallowRef<echarts.ECharts>()
+const viewport = ref({ w: 0, h: 0 })
 // Zoom presets in years (0 = all the way to retirement). Only presets shorter
 // than the full projection are offered, so none duplicates "到退休".
 const RANGES = [1, 3, 5, 10, 20, 30] as const
@@ -56,12 +63,12 @@ const hasDebt = computed(() => props.history.some((h) => h.debt_twd > 0.5) || pr
 const historyMonths = computed(() => data.value.history.filter((v) => v != null).length)
 const historyStart = computed(() => props.history[0]?.date ?? null)
 
-function option(): echarts.EChartsCoreOption {
+function option(target = el.value): echarts.EChartsCoreOption {
   const d = data.value
   const hit = props.timeToCoast.status === 'reachable' ? props.timeToCoast.month : null
   const hitIdx = hit ? d.months.indexOf(hit) : -1
   // Phones: the legend wraps to two rows and year labels need thinning.
-  const narrow = (el.value?.clientWidth ?? 800) < 520
+  const narrow = (target?.clientWidth ?? 800) < 520
   const firstYear = Number(d.months[0]?.slice(0, 4) ?? 0)
   const years = Number(d.months[d.months.length - 1]?.slice(0, 4) ?? 0) - firstYear + 1
   const yearStep = Math.max(1, Math.ceil(years / (narrow ? 5 : 10)))
@@ -77,7 +84,9 @@ function option(): echarts.EChartsCoreOption {
     connectNulls: false,
     lineStyle: { color, width: 2 },
     itemStyle: { color },
-    emphasis: { focus: 'series' },
+    // A tap on a touch screen never un-hovers, so in the phone overlay the
+    // hover blur would stick on the other lines.
+    emphasis: { focus: target === bigEl.value ? 'none' : 'series' },
     // Hovering a legend item blurs the other lines; after a click hides the hovered
     // line, they stayed blurred (on phones a tap never un-hovers), so it looked like
     // every line was cleared. Keep legend clicks a pure show/hide toggle.
@@ -161,15 +170,68 @@ function option(): echarts.EChartsCoreOption {
 
 function render() {
   chart.value?.setOption(option(), true)
+  if (bigChart.value) bigChart.value.setOption(option(bigEl.value), true)
 }
+
+// Held upright, rotate the overlay 90° clockwise (its left edge sits under the
+// notch); if the phone is already sideways, show it as is.
+const rotated = computed(() => viewport.value.h > viewport.value.w)
+const overlayStyle = computed(() => {
+  const { w, h } = viewport.value
+  return rotated.value
+    ? {
+        width: `${h}px`,
+        height: `${w}px`,
+        transform: 'rotate(90deg) translateY(-100%)',
+        transformOrigin: 'top left',
+        paddingLeft: 'max(0.75rem, env(safe-area-inset-top))',
+        paddingRight: 'max(0.75rem, env(safe-area-inset-bottom))',
+      }
+    : {
+        width: `${w}px`,
+        height: `${h}px`,
+        paddingLeft: 'max(0.75rem, env(safe-area-inset-left))',
+        paddingRight: 'max(0.75rem, env(safe-area-inset-right))',
+      }
+})
+function measureViewport() {
+  viewport.value = { w: window.innerWidth, h: window.innerHeight }
+}
+function onViewportChange() {
+  measureViewport()
+  nextTick(() => bigChart.value?.resize())
+}
+function onKey(e: KeyboardEvent) {
+  if (e.key === 'Escape') expanded.value = false
+}
+watch(expanded, async (open) => {
+  if (open) {
+    measureViewport()
+    document.body.style.overflow = 'hidden'
+    window.addEventListener('resize', onViewportChange)
+    window.addEventListener('keydown', onKey)
+    await nextTick()
+    bigChart.value = echarts.init(bigEl.value!, undefined, { renderer: 'canvas' })
+    bigChart.value.setOption(option(bigEl.value), true)
+  } else {
+    document.body.style.overflow = ''
+    window.removeEventListener('resize', onViewportChange)
+    window.removeEventListener('keydown', onKey)
+    bigChart.value?.dispose()
+    bigChart.value = undefined
+  }
+})
 
 let ro: ResizeObserver | undefined
 onMounted(() => {
   chart.value = echarts.init(el.value!, undefined, { renderer: 'canvas' })
   render()
   let wasNarrow = el.value!.clientWidth < 520
+  narrowCard.value = wasNarrow
   ro = new ResizeObserver(() => {
     const narrow = el.value!.clientWidth < 520
+    narrowCard.value = narrow
+    if (!narrow) expanded.value = false
     if (narrow !== wasNarrow) {
       wasNarrow = narrow
       render()
@@ -179,6 +241,11 @@ onMounted(() => {
   ro.observe(el.value!)
 })
 onBeforeUnmount(() => {
+  expanded.value = false
+  bigChart.value?.dispose()
+  document.body.style.overflow = ''
+  window.removeEventListener('resize', onViewportChange)
+  window.removeEventListener('keydown', onKey)
   ro?.disconnect()
   chart.value?.dispose()
 })
@@ -208,6 +275,43 @@ watch(() => [props.projection, props.history, props.timeToCoast, range.value], r
         </button>
       </div>
     </div>
-    <div ref="el" class="h-80 w-full sm:h-96" role="img" aria-label="Coast FIRE 預測圖" />
+    <div class="relative">
+      <div ref="el" class="h-80 w-full sm:h-96" role="img" aria-label="Coast FIRE 預測圖" />
+      <button v-if="narrowCard" type="button" class="absolute inset-0" aria-label="橫向放大預測圖" @click="expanded = true" />
+    </div>
+    <p v-if="narrowCard" class="mt-1 flex items-center justify-center gap-1 text-[11px] text-ink-400" aria-hidden="true">
+      <svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" /></svg>
+      點圖表可橫向放大
+    </p>
+    <Teleport to="body">
+      <div v-if="expanded" class="fixed inset-0 z-[65] bg-ink-950" role="dialog" aria-modal="true" aria-label="Coast FIRE 預測圖（放大）">
+        <div class="absolute left-0 top-0 flex flex-col py-2" :style="overlayStyle">
+          <div class="mb-1 flex items-center gap-2">
+            <h2 class="mr-auto truncate text-sm font-semibold">Coast FIRE 雙軌預測</h2>
+            <div class="flex shrink-0 rounded-lg border border-ink-700 p-0.5 text-xs" role="group" aria-label="時間範圍">
+              <button
+                v-for="opt in rangeOptions"
+                :key="opt.k"
+                class="whitespace-nowrap rounded-md px-2 py-1"
+                :class="range === opt.k ? 'bg-ink-700 text-ink-100' : 'text-ink-400'"
+                :aria-pressed="range === opt.k"
+                @click="range = opt.k"
+              >
+                {{ opt.t }}
+              </button>
+            </div>
+            <button
+              type="button"
+              class="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-ink-700 text-ink-300"
+              aria-label="關閉放大"
+              @click="expanded = false"
+            >
+              <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+            </button>
+          </div>
+          <div ref="bigEl" class="min-h-0 w-full flex-1" role="img" aria-label="Coast FIRE 預測圖" />
+        </div>
+      </div>
+    </Teleport>
   </section>
 </template>
